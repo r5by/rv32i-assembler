@@ -1,11 +1,10 @@
 import pytest
 from pathlib import Path
-from os.path import exists
 from riscv_assembler.convert import AssemblyConverter as AC
-from riscv_assembler.instr_arr import *
-from riscv_assembler.parse import Parser
+from riscv_assembler.utils import *
 
-num_test_files = 9
+
+num_test_files = 8
 num_questions = 15
 
 def SUITE():
@@ -24,8 +23,8 @@ def SUITE():
 	# 10. convert contents from string array to txt file
 	# 11. convert contents from string array to bin file
 
-	dump_path = str(Path(__file__).parent / "dump")
-	paths = [str(Path(__file__).parent / "assembly/test{}.s".format(i)) for i in range(num_test_files)]
+	dump_path = get_path(str(Path(__file__).parent / "dump"))
+	paths = list_asm_files_full_paths(str(Path(__file__).parent / "assembly"))
 
 	results = {i: [] for i in range(num_questions)}
 	for i, path in enumerate(paths):

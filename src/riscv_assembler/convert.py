@@ -12,7 +12,6 @@
 		- Update tests
 '''
 
-from riscv_assembler.instr_arr import *
 from riscv_assembler.parse import *
 from os.path import exists
 
