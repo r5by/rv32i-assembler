@@ -1,144 +1,145 @@
-'''
-	Current Functionality:
-		- Read given file
-		- Tokenize that file, split up variables on each line
-			- Identify function, registers, variables
-		- Convert tokens of that line to machine code
-		- Output to text, bin, or console
-
-	Immediate ToDos:
-		- Implement hexmode
-		- Go through and fix the instruction conversions themselves
-		- Update tests
-'''
-
+from argparse import ArgumentError
 from os.path import exists
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import List, Dict, Optional
 from riscv_assembler.asm_parser import *
 from riscv_assembler.utils import write_to_file
 from riscv_assembler.common import *
 
-__all__ = ['MCEmitter']
+__all__ = ['EmitCodeMode', 'RV32MCEmitter']
 
-class MCEmitter:
 
-	def __init__(self, nibble_mode : bool = False, hex_mode : bool = False) -> None:
-		self.__nibble_mode = self.__check_nibble_mode(nibble_mode)
-		self.__hex_mode = self.__check_hex_mode(hex_mode)
+class EmitCodeMode(Enum):
+    HEX = 'hex'  # hexadecimal
+    BIN = 'bin'  # binary
+    LST = 'lst'  # list
+    NIB = 'nib'  # nibble
 
-	def __str__(self):
-		return "Output: Nibble: {nibble_mode}, Hex: {hex_mode}".format(
-			nibble_mode = self.__nibble_mode,
-			hex_mode = self.__hex_mode
-		)
 
-	def __repr__(self):
-		return "Output: Nibble: {nibble_mode}, Hex: {hex_mode}".format(
-			nibble_mode = self.__nibble_mode,
-			hex_mode = self.__hex_mode
-		)
+class MCEmitter(ABC):
+    def __init__(self, base_addr: Optional[int] = 0x0):
+        # input lines of asm code
+        self._lines: List[str] = []
 
-	def clone(self):
-		return MCEmitter(
-			nibble_mode = self.__nibble_mode,
-			hex_mode = self.__hex_mode
-		)
+        # translatable lines of code indices in self._lines
+        self._translatable_indices: List[int] = []
 
-	def __call__(self, *args):
-		return self.translate(*args)
+        # keep record of translatable lines (assembly code)
+        self._mnemonics: List[str] = []
 
-	# def __check_output_mode(self, x) -> str:
-	# 	mod = ''.join(sorted(x.split()))
-	# 	assert mod in ['a', 'f', 'p', None], "Output Mode needs to be one of a(rray), f(ile), p(rint), or None."
-	# 	return x
+        # (local) symbol table: label=>index
+        self._symbol_table: Dict[str, int] = {}
 
-	def __check_nibble_mode(self, x) -> str:
-		assert type(x) == bool, "Nibble mode needs to be a boolean."
-		return x
+        # base address to calculate offset
+        self._base_addr = base_addr
 
-	def __check_hex_mode(self, x) -> str:
-		assert type(x) == bool, "Hex mode needs to be a boolean."
-		return x
+        # encoded instructions in binary format (by default)
+        self._encoded: List[str] = []
 
-	# '''
-	# 	Property: the way to output machine code
-	# 		Options: 'a', 'f', 'p'
-	# '''
-	# @property
-	# def output_mode(self) -> str:
-	# 	return self.__output_mode
+    @property
+    def lines(self) -> List[str]:
+        return self._lines
 
-	# @output_mode.setter
-	# def output_mode(self, x : str) -> None:
-	# 	self.__output_mode = x
+    @lines.setter
+    def lines(self, lines: List[str]):
+        self._lines = lines
 
-	'''
-		Property: whether to print in nibbles (only applicable for text or print)
-			True = nibble
-			False = full number
-	'''
-	@property
-	def nibble_mode(self) -> str:
-		return self.__nibble_mode
+    @property
+    def encoded(self) -> List[str]:
+        return self._encoded
 
-	@nibble_mode.setter
-	def nibble_mode(self, x : str) -> None:
-		self.__nibble_mode = x
+    @encoded.setter
+    def encoded(self, encoded: List[str]):
+        self._encoded = encoded
 
-	'''
-	Property: whether to return as hex or not
-		True = hex
-		False = binary
-	'''
-	@property
-	def hex_mode(self) -> str:
-		return self.__hex_mode
+    @property
+    def mnemonics(self) -> List[str]:
+        return self._mnemonics
 
-	@hex_mode.setter
-	def hex_mode(self, x : str) -> None:
-		self.__hex_mode = x
+    @mnemonics.setter
+    def mnemonics(self, mnemonics: List[str]):
+        self._mnemonics = mnemonics
 
-	'''
-		Put it all together. Need to modify for output type.
+    @property
+    def translatable_indices(self) -> List[int]:
+        return self._translatable_indices
 
-		Input is either a file name or string of assembly.
-	'''
-	def translate(self, input : str, file : str = None):
-		asm, output = Parser(input)
-		assert len(output) > 0, "Provided input yielded nothing from parser. Check input."
-		output = self.mod(output) # apply nibble mode, hex mode
+    # @translatable_indices.setter
+    # def translatable_indices(self, indices: List[int]):
+    #     self._translatable_indices = indices
 
-		return asm, output
+    @property
+    def symbol_table(self) -> Dict[str, int]:
+        return self._symbol_table
 
-		# if self.__output_mode == 'a':
-		# 	return output
-		# elif self.__output_mode == 'f':
-		# 	prov_dir = '/'.join(file.split('/')[:-1])
-		# 	assert file != None, "For output mode to file, need to provided file name."
-		# 	assert exists(prov_dir if prov_dir != '' else '.'), "Directory of provided file name does not exist."
-		#
-		# 	if self.__hex_mode and file[-4:] == '.bin':
-		# 		# change back to binary
-		# 		WARN('hex mode overrided in over to output to binary file.')
-		# 		output = [format(int(elem, 16), '032b') for elem in output]
-		# 	write_to_file(output, file)
-		# 	return
-		# elif self.__output_mode == 'p':
-		# 	INFO('\n'.join(output))
-		# 	return
-		#
-		# raise NotImplementedError()
+    @symbol_table.setter
+    def symbol_table(self, table: Dict[str, int]):
+        self._symbol_table = table
 
-	def mod(self, output : list) -> list:
-		if self.__nibble_mode:
-			output = MCEmitter.apply_nibble(output)
-		elif self.__hex_mode:
-			output = MCEmitter.apply_hex(output)
-		return output
+    @property
+    def base_addr(self) -> int:
+        return self._base_addr
 
-	@staticmethod
-	def apply_nibble(output : list) -> list:
-		return ['\t'.join([elem[i:i+4] for i in range(0, len(elem), 4)]) for elem in output]
+    @base_addr.setter
+    def base_addr(self, addr: int):
+        self._base_addr = addr
 
-	@staticmethod
-	def apply_hex(output : list) -> list:
-		return ['0x' + '{:08X}'.format(int(elem, 2)).lower() for elem in output]
+    @abstractmethod
+    def parse_lines(self, input: str):
+        """
+        Subclasses should implement this method to parse
+        the lines of assembly code and populate the properties.
+        """
+        pass
+
+    @abstractmethod
+    def emit_code(self, mod: EmitCodeMode):
+        """
+        Subclasses should implement this method to emit the
+        machine code using the parsed lines and symbol table.
+        """
+        pass
+
+
+class RV32MCEmitter(MCEmitter):
+
+    def __call__(self, *args):
+        self.parse_lines(*args)
+
+    def parse_lines(self, input: str):
+        DEBUG_INFO(f'Passing assembly lines from {input}')
+        asm, output = Parser(input)
+        if len(output) <= 0:
+            raise ValueError(f'Provided input: {input} yielded nothing from parser. Check input.')
+
+        self.encoded = output
+        self.mnemonics = asm
+
+    def emit_code(self, mode: EmitCodeMode = EmitCodeMode.HEX):
+
+        if mode == EmitCodeMode.HEX:
+            DEBUG_INFO("Emitting code in hexadecimal format...")
+            return self.apply_hex()
+        elif mode == EmitCodeMode.BIN:
+            DEBUG_INFO("Emitting code in binary format...")
+            return self.encoded
+        elif mode == EmitCodeMode.LST:
+            DEBUG_INFO("Emitting code in list format...")
+            # todo> add list
+            return self.to_list()
+        elif mode == EmitCodeMode.NIB:
+            DEBUG_INFO("Emitting code in nibble format...")
+            return self.apply_nibble()
+        else:
+            raise ValueError("Unsupported EmitCodeMode")
+
+    def apply_nibble(self) -> list:
+        return ['\t'.join([elem[i:i + 4] for i in range(0, len(elem), 4)]) for elem in self.encoded]
+
+    def apply_hex(self) -> list:
+        return ['0x' + '{:08X}'.format(int(elem, 2)).lower() for elem in self.encoded]
+
+    def to_list(self) -> list:
+        # todo>
+        return []

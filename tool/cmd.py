@@ -1,7 +1,7 @@
 import sys
 import select
 import argparse
-from riscv_assembler.code_emitter import MCEmitter
+from riscv_assembler.code_emitter import RV32MCEmitter, EmitCodeMode
 from riscv_assembler.common import *
 
 def parse_cmd():
@@ -19,7 +19,8 @@ def parse_cmd():
                                                                            "format to .hex file, default to %s.hex")
     parser.add_argument("-lst", "--list", type=str, help="output list file for validation, default to %s.lst")
 
-    parser.add_argument("-s", "--assemble", type=str, help="Input file (.s) to be assembled")
+    parser.add_argument("-s", "--assemble", type=str, help="input file (.s) to be assembled")
+    parser.add_argument("-base", "--base-addr", type=int, default=0x8000, help="base address to assemble the code upon")
 
     # Parse the arguments
     args = parser.parse_args()
@@ -58,10 +59,14 @@ def parse_cmd():
     DEBUG_INFO(f'Reading in assembly code:\n {assembly_code}')
 
     # Handle output files
-    mc = MCEmitter(hex_mode=True)
-    mnemonics, encoded = mc.translate(assembly_code)
+    mc = RV32MCEmitter(base_addr=args.base_addr)
+    mc.parse_lines(assembly_code)
+    mnemonics = mc.mnemonics
 
     if args.show_encoding:
+        # show encoding in hex format for CheckFile usage
+        encoded = mc.emit_code(EmitCodeMode.HEX)
+
         for (asm, encoding) in zip(mnemonics, encoded):
             # Convert the encoding string to an integer
             encoding_int = int(encoding, 16)
@@ -73,6 +78,27 @@ def parse_cmd():
             encoding_hex = ','.join(f'0x{byte:02x}' for byte in encoding_bytes)
             print(f'{asm} \t# encoding: [{encoding_hex}]')
 
+    # ref:
+    # if self.__output_mode == 'a':
+    # 	return output
+    # elif self.__output_mode == 'f':
+    # 	prov_dir = '/'.join(file.split('/')[:-1])
+    # 	assert file != None, "For output mode to file, need to provided file name."
+    # 	assert exists(prov_dir if prov_dir != '' else '.'), "Directory of provided file name does not exist."
+    #
+    # 	if self.__hex_mode and file[-4:] == '.bin':
+    # 		# change back to binary
+    # 		WARN('hex mode overrided in over to output to binary file.')
+    # 		output = [format(int(elem, 16), '032b') for elem in output]
+    # 	write_to_file(output, file)
+    # 	return
+    # elif self.__output_mode == 'p':
+    # 	INFO('\n'.join(output))
+    # 	return
+    #
+    # raise NotImplementedError()
+
+    # todo>
     if args.binary:
         INFO(f'Writing output into {args.binary}')
 
