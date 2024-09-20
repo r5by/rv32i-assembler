@@ -4,6 +4,6 @@
 
 
 # CHECK-ASM: encoding: [0xb3,0x00,0x00,0x00]
-add x1, x0, x0
+add	ra, zero, zero
 # CHECK-ASM: encoding: [0xb3,0x82,0x63,0x40]
-sub t0, t2, t1
+sub	t0, t2, t1

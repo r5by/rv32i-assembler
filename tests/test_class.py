@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from riscv_assembler.convert import AssemblyConverter as AC
+from riscv_assembler.code_emitter import MCEmitter as AC
 from riscv_assembler.utils import *
 
 
@@ -28,29 +28,30 @@ def SUITE():
 
 	results = {i: [] for i in range(num_questions)}
 	for i, path in enumerate(paths):
-		# 1.
+		# 1. verify output translated code
 		cnv = AC(hex_mode = True, output_mode = 'a')
 		results[0] += [cnv(path)] #**
-		# 2.
+		# 2. print out translation to console, put 'None' to test
 		cnv.output_mode = 'p'
 		print('Printing Output')
 		results[1] += [cnv(path)]
-		# 3. 
+		# 3. write output to .txt file
 		cnv.output_mode = 'f'
 		cnv(path, dump_path + '/file{}.txt'.format(i))
 		results[2] += ['file{}.txt'.format(i)] #**
-		# 4. 
+		# 4. write output to .bin file
 		cnv(path, dump_path + '/file{}.bin'.format(i))
 		results[3] += ['file{}.bin'.format(i)] #**
 
+		# get in the code as string for later test cases
 		with open(path) as f:
 			code = [elem for elem in f.readlines() if len(elem.strip()) > 0]
 		str_code = ''.join(code)
 
-		# 5.
+		# 5. test input as string
 		cnv.output_mode = 'a'
 		results[4] += [cnv(str_code)] #**
-		# 6.
+		# 6. print out string translated code to console
 		cnv.output_mode = 'p'
 		print('Printing Output')
 		results[5] += [cnv(str_code)]

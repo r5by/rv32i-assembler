@@ -1,4 +1,4 @@
-from riscv_assembler.instr_arr import *
+from riscv_assembler.instr_info import *
 from types import FunctionType as function
 from os.path import exists
 __all__ = ['Parser']
@@ -92,7 +92,7 @@ class _Parser:
 			tokens = _Parser.tokenize(line, line_num, code)
 			int_code += [_Parser.interpret(tokens) for _ in range(1) if len(tokens) != 0]
 
-		return int_code
+		return code, int_code
 
 	'''
 		Tokenize a given line
