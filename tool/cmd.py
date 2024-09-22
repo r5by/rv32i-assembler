@@ -1,7 +1,7 @@
 import sys
 import select
 import argparse
-from riscv_assembler.code_emitter import RV32MCEmitter, EmitCodeMode
+from riscv_assembler.asm_backend import RV32Backend, EmitCodeMode
 from riscv_assembler.common import *
 
 def parse_cmd():
@@ -59,8 +59,8 @@ def parse_cmd():
     DEBUG_INFO(f'Reading in assembly code:\n {assembly_code}')
 
     # Handle output files
-    mc = RV32MCEmitter(base_addr=args.base_addr)
-    mc.parse_lines(assembly_code)
+    mc = RV32Backend(lines=assembly_code, base_addr=args.base_addr)
+    mc.parse_lines()
     mnemonics = mc.mnemonics
 
     if args.show_encoding:
@@ -103,10 +103,10 @@ def parse_cmd():
         INFO(f'Writing output into {args.binary}')
 
     if args.hexadecimal:
-        print("Emitting hex file...")
+        INFO("Emitting hex file...")
 
     if args.list:
-        print("Emit list file (TODO)")
+        INFO("Emit list file (TODO)")
         # TODO: Implement the functionality to emit list file
 
 

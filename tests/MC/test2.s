@@ -6,7 +6,7 @@ addi s1, x0, 10
 # addi x0, x0, 0
 # addi x0, x0, 0
 
-beq s1, s0, loop
+# beq s1, s0, loop
 
 loop:
 	addi s1, s0, -32

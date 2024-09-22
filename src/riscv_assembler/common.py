@@ -1,14 +1,5 @@
 import logging
 
-# Configure the logging system
-# class CustomFormatter(logging.Formatter):
-#     def format(self, record):
-#         msg = super().format(record)
-#         lines = msg.split('\n')
-#         formatted_lines = []
-#         for line in lines:
-#             formatted_lines.append(f"{self.formatTime(record)} [{record.levelname}] {line}")
-#         return '\n'.join(formatted_lines)
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
     COLORS = {

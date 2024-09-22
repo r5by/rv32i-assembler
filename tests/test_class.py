@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from riscv_assembler.code_emitter import MCEmitter as AC
+from riscv_assembler.asm_backend import AsmBackend as AC
 from riscv_assembler.utils import *
 
 

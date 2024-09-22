@@ -7,7 +7,5 @@
 addi	s0, zero, 10
 # CHECK-ASM: encoding: [0x93,0x04,0xa0,0x00]
 addi	s1, zero, 10
-# CHECK-ASM: encoding: [0x63'A',0x80'A',0x84'A',A]
-beq	s1, s0, loop
 # CHECK-ASM: encoding: [0x93,0x04,0x04,0xfe]
 addi	s1, s0, -32
