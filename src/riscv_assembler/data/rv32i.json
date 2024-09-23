@@ -1,0 +1,8 @@
+{
+    "R": ["add", "sub", "xor", "or", "and", "sll", "srl", "sra", "slt", "sltu"],
+    "S": ["sb", "sh", "sw"],
+    "I": ["addi", "xori", "ori", "andi", "slli", "srli", "srai", "slti", "sltiu", "lb", "lh", "lw", "lbu", "lhu", "jalr", "ecall", "ebreak"],
+    "B": ["beq", "bne", "blt", "bge", "bltu", "bgeu"],
+    "U": ["lui", "auipc"],
+    "J": ["jal"]
+}

@@ -31,7 +31,7 @@ handler.setFormatter(formatter)
 logger = logging.getLogger()
 logger.addHandler(handler)
 
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 def DEBUG_INFO(message):
     logger.debug(message)

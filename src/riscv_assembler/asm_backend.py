@@ -200,7 +200,8 @@ class RV32Backend(AsmBackend):
             label_match = label_pattern.match(line)
             if label_match:
                 label_name = label_match.group(1)
-                self.symbol_table[label_name] = translatable_line_cnt  # label => its next translatable line
+                self.symbol_table[label_name] = self.base_addr + (translatable_line_cnt << 2)  # label => its next
+                # translatable line address
                 # Remove the label from the line for further processing
                 line = line[label_match.end():].strip()
                 if not line:
@@ -212,7 +213,7 @@ class RV32Backend(AsmBackend):
 
             #region Handle translatable instruction
             for line in expanded_lines:
-                if not self.is_translatable_line(line):
+                if not RV32Backend.is_translatable_line(line):
                     raise ValueError(f'Unknown assembly code detected {line}!')
 
                 # Remove extra whitespaces
@@ -226,9 +227,39 @@ class RV32Backend(AsmBackend):
         DEBUG_INFO(f'Preprocess is completed with {translatable_line_cnt} assembly instructions in total')
 
     def handle_directives(self, directive_name: str, directive_args: str):
-        pass
+        """
+            Handle RISC-V assembly directives.
+            todo> add more directives support
 
-    def is_translatable_line(self, line: str) -> bool:
+            Parameters:
+            directive_name (str): The name of the directive.
+            directive_args (str): The arguments of the directive.
+
+            Example:
+                .equ CONST, 30
+            """
+        if directive_name == 'equ':
+            # Split the arguments by comma
+            args = directive_args.split(',')
+            if len(args) != 2:
+                raise ValueError(".equ directive requires exactly two arguments")
+            name = args[0].strip().lower()
+            value_str = args[1].strip()
+
+            try:
+                # Evaluate the expression in value_str
+                value = eval(value_str)
+                # Store the name and value in the symbol table
+                self.symbol_table[name] = value
+                INFO(f"Defined {name} as {value}")
+            except Exception as e:
+                raise ValueError(f"Error in .equ directive: {e}")
+        else:
+            # raise NotImplementedError(f"Directive '{directive_name}' is not implemented")
+            pass  # todo> don't need to panic yet
+
+    @staticmethod
+    def is_translatable_line(line: str) -> bool:
             """
             Determines if a given assembly code line can be translated into RISC-V assembly code.
             RISC-V mnemonics can include letters, numbers, and periods (e.g., 'fadd.s')
@@ -281,7 +312,7 @@ class RV32Backend(AsmBackend):
 
     def parse_lines(self, asm: Optional[str] = None):
         DEBUG_INFO(f'Passing assembly lines from {input}')
-        parsed = Parser(self.mnemonics, self.symbol_table)
+        parsed = Parser(self.mnemonics, self.symbol_table, self.base_addr)
         if len(parsed) <= 0:
             raise ValueError(f'Provided input: {input} yielded nothing from parser. Check input.')
 
@@ -310,7 +341,8 @@ class RV32Backend(AsmBackend):
         return ['\t'.join([elem[i:i + 4] for i in range(0, len(elem), 4)]) for elem in self.encoded]
 
     def apply_hex(self) -> list:
-        return ['0x' + '{:08X}'.format(int(elem, 2)).lower() for elem in self.encoded]
+        # return ['0x' + '{:08X}'.format(int(elem, 2)).lower() for elem in self.encoded]
+        return ['0x{:08x}'.format(int(elem, 2)) for elem in self.encoded]
 
     def to_list(self) -> list:
         # todo>

@@ -1,5 +1,8 @@
 import os
 import glob
+import json
+import inspect
+
 
 def get_path(dir: str) -> str:
     """
@@ -70,3 +73,22 @@ def write_to_file(output : list, file : str) -> None:
         raise NotImplementedError()
 
     raise NotImplementedError()
+
+def load_json_config(conf: str):
+    # Get the caller's frame
+    caller_frame = inspect.stack()[1]
+    caller_filename = caller_frame.filename
+
+    # Get the directory of the caller's file
+    caller_directory = os.path.dirname(os.path.abspath(caller_filename))
+
+    # Combine the caller's directory with the provided conf path
+    full_path = os.path.join(caller_directory, conf)
+    full_path = os.path.expanduser(os.path.expandvars(full_path))
+    full_path = os.path.abspath(full_path)
+
+    # Open and read the JSON file
+    with open(full_path, 'r') as file:
+        json_data = json.load(file)
+
+    return json_data

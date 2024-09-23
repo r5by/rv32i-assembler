@@ -17,19 +17,26 @@ def init_abi_alias():
 
 abi_alias = init_abi_alias()
 
+# Regular expressions for different cases
+dict_pat_reg = {
+	"x": re.compile(r"^x([0-9]|[1-2][0-9]|3[0-1])$"),
+	"named": re.compile(r"^(zero|ra|sp|gp|tp|fp)$"),
+	"a": re.compile(r"^a[0-7]$"),
+	"s": re.compile(r"^s([0-9]|1[0-1])$"),
+	"t": re.compile(r"^t([0-6])$"),
+}
+
+def is_reg(token: str):
+	for key, pattern in dict_pat_reg.items():
+		if pattern.match(token):
+			return True
+
+	return False
 
 def reg_map(reg: str):
-	# Regular expressions for different cases
-	patterns = {
-		"x": re.compile(r"^x([0-9]|[1-2][0-9]|3[0-1])$"),
-		"named": re.compile(r"^(zero|ra|sp|gp|tp|fp)$"),
-		"a": re.compile(r"^a[0-7]$"),
-		"s": re.compile(r"^s([0-9]|1[0-1])$"),
-		"t": re.compile(r"^t([0-6])$"),
-	}
 
 	# Check if the register matches any of the valid patterns
-	for key, pattern in patterns.items():
+	for key, pattern in dict_pat_reg.items():
 		if pattern.match(reg):
 			# Check and return for x category
 			if key == "x":
