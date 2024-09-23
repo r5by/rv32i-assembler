@@ -57,22 +57,19 @@ def write_to_file(output : list, file : str) -> None:
                 byte_array = [instr[i:i+8] for i in range(0,len(instr),8)]
                 byte_list = [int(b,2) for b in byte_array]
                 f.write(bytearray(byte_list))
-        return
 
-    elif extension == '.txt':
-        with open(file, 'w') as f:
+    elif extension == '.hex':
+        with open(file, 'wb') as f:
             for instr in output:
-                f.write(instr + "\n")
+                hex_string = instr[2:] if instr.startswith('0x') else instr
+                byte_data = bytes.fromhex(hex_string)
+                f.write(byte_data)
 
-        return
-
-    elif extension == '.csv':
+    elif extension == '.lst':
         raise NotImplementedError()
 
-    elif extension == '.dat':
+    else:
         raise NotImplementedError()
-
-    raise NotImplementedError()
 
 def load_json_config(conf: str):
     # Get the caller's frame

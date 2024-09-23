@@ -1,8 +1,11 @@
 import sys
+import os
 import select
 import argparse
 from riscv_assembler.asm_backend import RV32Backend, EmitCodeMode
 from riscv_assembler.common import *
+from riscv_assembler.utils import write_to_file
+
 
 def parse_cmd():
     # Create the argument parser
@@ -13,9 +16,9 @@ def parse_cmd():
     parser.add_argument("-q", "--quiet", action="store_true", help="enable quiet output mode")
     parser.add_argument("-show-encoding", "--show-encoding", action="store_true", help="print out instruction encoding "
                                                                                        "info")
-    parser.add_argument("-bin", "--binary", type=str, help="output translated machine code in binary "
+    parser.add_argument("-bin", "--binary", nargs='?', const=True, help="output translated machine code in binary "
                                                                       "format to .bin file, default to %s.bin")
-    parser.add_argument("-hex", "--hexadecimal", type=str, help="output translated machine code in hex "
+    parser.add_argument("-hex", "--hexadecimal", nargs='?', const=True, help="output translated machine code in hex "
                                                                            "format to .hex file, default to %s.hex")
     parser.add_argument("-lst", "--list", type=str, help="output list file for validation, default to %s.lst")
 
@@ -63,11 +66,12 @@ def parse_cmd():
     mc.parse_lines()
     mnemonics = mc.mnemonics
 
-    if args.show_encoding:
-        # show encoding in hex format for CheckFile usage
-        encoded = mc.emit_code(EmitCodeMode.HEX)
+    # show encoding in hex format for CheckFile usage
+    hex_encoded = mc.emit_code(EmitCodeMode.HEX)
 
-        for (asm, encoding) in zip(mnemonics, encoded):
+    if args.show_encoding:
+
+        for (asm, encoding) in zip(mnemonics, hex_encoded):
             # Convert the encoding string to an integer
             encoding_int = int(encoding, 16)
 
@@ -78,32 +82,28 @@ def parse_cmd():
             encoding_hex = ','.join(f'0x{byte:02x}' for byte in encoding_bytes)
             print(f'{asm} \t# encoding: [{encoding_hex}]')
 
-    # ref:
-    # if self.__output_mode == 'a':
-    # 	return output
-    # elif self.__output_mode == 'f':
-    # 	prov_dir = '/'.join(file.split('/')[:-1])
-    # 	assert file != None, "For output mode to file, need to provided file name."
-    # 	assert exists(prov_dir if prov_dir != '' else '.'), "Directory of provided file name does not exist."
-    #
-    # 	if self.__hex_mode and file[-4:] == '.bin':
-    # 		# change back to binary
-    # 		WARN('hex mode overrided in over to output to binary file.')
-    # 		output = [format(int(elem, 16), '032b') for elem in output]
-    # 	write_to_file(output, file)
-    # 	return
-    # elif self.__output_mode == 'p':
-    # 	INFO('\n'.join(output))
-    # 	return
-    #
-    # raise NotImplementedError()
-
-    # todo>
     if args.binary:
-        INFO(f'Writing output into {args.binary}')
+        if isinstance(args.binary, str):
+            output_filename = args.binary
+        else:
+            source_filename = args.assemble
+            output_filename = os.path.splitext(source_filename)[0] + '.bin'
+
+        bin_encoded = mc.emit_code(EmitCodeMode.BIN)
+        INFO(f'Writing output into {output_filename}')
+        write_to_file(bin_encoded, output_filename)
 
     if args.hexadecimal:
-        INFO("Emitting hex file...")
+        # Determine the output filename
+        if isinstance(args.hexadecimal, str):
+            output_filename = args.hexadecimal
+        else:
+            # Use the source filename without extension and add .hex
+            source_filename = args.assemble
+            output_filename = os.path.splitext(source_filename)[0] + '.hex'
+
+        INFO(f'Writing output into {output_filename}')
+        write_to_file(hex_encoded, output_filename)
 
     if args.list:
         INFO("Emit list file (TODO)")
