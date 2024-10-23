@@ -1,8 +1,8 @@
 import re
 
-from riscv_assembler.instr_info import rv32i
-from riscv_assembler.common import *
-from riscv_assembler.reg_info import is_reg, reg_map
+from asm.instr_info import rv32i
+from comm.logging import *
+from asm.reg_info import is_reg, reg_map
 from typing import Dict
 __all__ = ['Parser']
 

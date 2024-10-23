@@ -1,5 +1,5 @@
-from riscv_assembler.utils import get_path
-from riscv_assembler.asm_backend import AsmBackend
+from asm.utils import get_path
+from asm.asm_backend import AsmBackend
 
 if __name__ == '__main__':
     # cnv = MCEmitter(hex_mode=True, output_mode='f')  # Initialize converter

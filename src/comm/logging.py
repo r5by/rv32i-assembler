@@ -1,13 +1,14 @@
 import logging
+from comm.colors import *
 
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
     COLORS = {
-        'DEBUG': '\033[93m',  # Yellow
-        'INFO': '\033[92m',  # Green
-        'WARNING': '\033[93m',  # Yellow
-        'ERROR': '\033[91m',  # Red
-        'CRITICAL': '\033[95m'  # Magenta
+        'DEBUG': FMT_DEBUG, # Magenta
+        'INFO': FMT_INFO,  # Green
+        'WARNING': FMT_WARNING,  # Yellow
+        'ERROR': FMT_ERROR,  # Red
+        'CRITICAL': '\033[95m'
     }
     RESET = '\033[0m'
 

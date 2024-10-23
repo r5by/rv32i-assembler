@@ -1,7 +1,7 @@
 import os
 import re
 import subprocess
-from riscv_assembler.utils import get_filelist_with_pattern
+from asm.utils import get_filelist_with_pattern
 
 CONF_FILE = 'test.cfg'
 

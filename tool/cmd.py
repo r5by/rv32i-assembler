@@ -2,9 +2,9 @@ import sys
 import os
 import select
 import argparse
-from riscv_assembler.asm_backend import RV32Backend, EmitCodeMode
-from riscv_assembler.common import *
-from riscv_assembler.utils import write_to_file
+from asm.asm_backend import RV32Backend, EmitCodeMode
+from comm.logging import *
+from asm.utils import write_to_file
 
 
 def parse_cmd():
@@ -80,7 +80,7 @@ def parse_cmd():
 
             # Format bytes as hex strings
             encoding_hex = ','.join(f'0x{byte:02x}' for byte in encoding_bytes)
-            print(f'{asm} \t# encoding: [{encoding_hex}]')
+            INFO(f'{asm} \t# encoding: [{encoding_hex}]')
 
     if args.binary:
         if isinstance(args.binary, str):

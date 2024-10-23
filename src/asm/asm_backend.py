@@ -3,9 +3,8 @@ import re
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Dict, Optional
-from riscv_assembler.rv32_parser import *
-from riscv_assembler.utils import write_to_file
-from riscv_assembler.common import *
+from asm.rv32_parser import *
+from comm.logging import *
 
 __all__ = ['EmitCodeMode', 'RV32Backend']
 

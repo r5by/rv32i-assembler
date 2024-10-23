@@ -1,11 +1,11 @@
 import re
 
-from riscv_assembler.common import DEBUG_INFO
-from riscv_assembler.utils import load_json_config
+from comm.logging import DEBUG_INFO
+from asm.utils import load_json_config
 from enum import Enum, auto
 from typing import Dict, List, Union, Callable
 from abc import ABC, abstractmethod
-from riscv_assembler.reg_info import reg_map
+from asm.reg_info import reg_map
 
 __all__ = ['RV32InstrInfo']
 
