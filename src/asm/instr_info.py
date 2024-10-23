@@ -1,5 +1,6 @@
 import re
 
+from comm.exceptions import ParseException, InvalidRegisterException, UnknownAssemblyException, UnimplementedException
 from comm.logging import DEBUG_INFO
 from asm.utils import load_json_config
 from enum import Enum, auto
@@ -55,7 +56,7 @@ class RV32InstrInfo(InstrInfo):
             str: Binary representation of the instruction.
         """
         if op not in self.instr_map:
-            raise ValueError(f"Unsupported instruction '{op}'")
+            raise ParseException("Unsupported instruction: {}".format(op))
 
         instr_type = self.instr_map[op]
         DEBUG_INFO(f'determining type of {op}: {instr_type.name}')
@@ -82,7 +83,7 @@ class RV32InstrInfo(InstrInfo):
         reg_pattern = r'x(\d+)$'
         match = re.match(reg_pattern, reg_name)
         if not match:
-            raise ValueError(f"Invalid register name '{reg_name}'")
+            raise InvalidRegisterException(reg_name)
         return int(match.group(1))
     
     @staticmethod
@@ -104,10 +105,10 @@ class RV32InstrInfo(InstrInfo):
     def extract_imm_reg(imm_expr: str) -> (int, str):
         remain = RV32InstrInfo.extract_imm_num(imm_expr)
 
-        pat_num_paren = r'^(.*)\(([^()]*)\)\s*$'  # i.e. 4(x3) or 0x800(x2)
+        pat_num_paren = r'^(.*)\(([^()]*)\)\s*$'  # i.e. 4(x3) or 0x800(x2), todo> fix this re 4?(xxx) shouldn't work
         match = re.search(pat_num_paren, remain)
         if not match:
-            raise ValueError(f'imm(reg) format is not found in expression: {imm_expr}')
+            raise InvalidRegisterException(imm_expr)
 
         imm = match.group(1).strip()  # Content before the parentheses
         reg = reg_map(match.group(2))
@@ -136,7 +137,7 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported S-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported S-type instruction '{op}'")
 
         funct3 = instr_map[op]['funct3']
         opcode = instr_map[op]['opcode']
@@ -201,7 +202,7 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported R-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported R-type instruction '{op}'")
 
         funct7 = instr_map[op]['funct7']
         funct3 = instr_map[op]['funct3']
@@ -209,7 +210,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Expected argument order: rd (destination register), rs1, rs2
         if len(args) != 3:
-            raise ValueError(f"Expected 3 arguments for R-type instruction '{op}', got {len(args)}")
+            raise ParseException(f"Expected 3 arguments for R-type instruction '{op}', got {len(args)}")
 
         rd, rs1, rs2 = args
 
@@ -266,7 +267,7 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported I-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported I-type instruction '{op}'")
 
         instr_info = instr_map[op]
         funct3 = instr_info['funct3']
@@ -391,14 +392,14 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported B-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported B-type instruction '{op}'")
 
         funct3 = instr_map[op]['funct3']
         opcode = instr_map[op]['opcode']
 
         # Expected argument order: rs1, rs2, imm (offset)
         if len(args) != 3:
-            raise ValueError(f"Expected 3 arguments for B-type instruction '{op}', got {len(args)}")
+            raise ParseException(f"Expected 3 arguments for B-type instruction '{op}', got {len(args)}")
 
         rs1, rs2, imm = args
 
@@ -451,13 +452,13 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported U-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported U-type instruction '{op}'")
 
         opcode = instr_map[op]['opcode']
 
         # Expected argument order: rd (destination register), imm (immediate value)
         if len(args) != 2:
-            raise ValueError(f"Expected at least 2 arguments for U-type instruction '{op}', got {len(args)}")
+            raise ParseException(f"Expected at least 2 arguments for U-type instruction '{op}', got {len(args)}")
 
 
         rd, imm = args
@@ -503,13 +504,13 @@ class RV32InstrInfo(InstrInfo):
         }
 
         if op not in instr_map:
-            raise ValueError(f"Unsupported J-type instruction '{op}'")
+            raise UnimplementedException(f"Unsupported J-type instruction '{op}'")
 
         opcode = instr_map[op]['opcode']
 
         # Expected argument order: rd (destination register), imm (immediate value)
         if len(args) != 2:
-            raise ValueError(f"Expected 2 arguments for J-type instruction '{op}', got {len(args)}")
+            raise ParseException(f"Expected 2 arguments for J-type instruction '{op}', got {len(args)}")
 
         rd, imm = args
         imm = eval(imm) if is_expr(imm) else int(imm)
@@ -626,7 +627,7 @@ def is_expr(input_str: str) -> bool:
             if self.current_token[0] == token_type:
                 self.next_token()
             else:
-                raise Exception(f"Expected {token_type}, got {self.current_token}")
+                raise ParseException(f"Expected {token_type}, got {self.current_token}")
 
         def parse(self) -> bool:
             try:
@@ -659,7 +660,7 @@ def is_expr(input_str: str) -> bool:
                 self.expression()
                 self.expect('RPAREN')
             else:
-                raise Exception("Expected NUMBER or LPAREN")
+                raise ParseException("Expected NUMBER or LPAREN")
 
     parser = Parser(tokens)
     return parser.parse()

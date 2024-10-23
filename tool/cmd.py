@@ -5,6 +5,7 @@ import argparse
 from asm.asm_backend import RV32Backend, EmitCodeMode
 from comm.logging import *
 from asm.utils import write_to_file
+from comm.exceptions import RV32IBaseException
 
 
 def parse_cmd():
@@ -62,8 +63,14 @@ def parse_cmd():
     DEBUG_INFO(f'Reading in assembly code:\n {assembly_code}')
 
     # Handle output files
-    mc = RV32Backend(lines=assembly_code, base_addr=args.base_addr)
-    mc.parse_lines()
+    try:
+        mc = RV32Backend(lines=assembly_code, base_addr=args.base_addr)
+        mc.parse_lines()
+    except RV32IBaseException as e:
+        ERROR("Error: {}".format(e.message()))
+        e.print_stacktrace()
+        sys.exit(-1)
+
     mnemonics = mc.mnemonics
 
     # show encoding in hex format for CheckFile usage
@@ -107,6 +114,7 @@ def parse_cmd():
 
     if args.list:
         INFO("Emit list file (TODO)")
+        # list_file = mc.emit_code(EmitCodeMode.LST)
         # TODO: Implement the functionality to emit list file
 
 

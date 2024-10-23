@@ -10,7 +10,7 @@ class _Parser:
 
 	def __call__(self, *args) -> list:
 		if len(args) < 2:
-			raise Exception('rv32 instruction parser requires at least code string and symbol table as input!')
+			raise RuntimeError('rv32 instruction parser requires at least code string and symbol table as input!')
 
 		code_arr = args[0]
 		symbol_table = args[1]
@@ -50,6 +50,7 @@ class _Parser:
 				encoded_instruction = _Parser.encode(tokens)
 				int_code.append(encoded_instruction)
 				DEBUG_INFO('Succeeded!')
+
 		return int_code
 
 	@staticmethod

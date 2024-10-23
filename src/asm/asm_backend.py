@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Dict, Optional
 from asm.rv32_parser import *
+from comm.exceptions import ParseException, UnknownAssemblyException, UnimplementedException
 from comm.logging import *
 
 __all__ = ['EmitCodeMode', 'RV32Backend']
@@ -213,7 +214,7 @@ class RV32Backend(AsmBackend):
             #region Handle translatable instruction
             for line in expanded_lines:
                 if not RV32Backend.is_translatable_line(line):
-                    raise ValueError(f'Unknown assembly code detected {line}!')
+                    raise UnknownAssemblyException(f'Unknown assembly code detected: {line}!')
 
                 # Remove extra whitespaces
                 line = whitespace_pattern.sub(' ', line).strip()
@@ -241,7 +242,9 @@ class RV32Backend(AsmBackend):
             # Split the arguments by comma
             args = directive_args.split(',')
             if len(args) != 2:
-                raise ValueError(".equ directive requires exactly two arguments")
+                raise ParseException(".{} requires exactly two arguments, but got {} instead: args={}".format(
+                    directive_name,
+                                                                                                 len(args), args))
             name = args[0].strip().lower()
             value_str = args[1].strip()
 
@@ -252,7 +255,7 @@ class RV32Backend(AsmBackend):
                 self.symbol_table[name] = value
                 INFO(f"Defined {name} as {value}")
             except Exception as e:
-                raise ValueError(f"Error in .equ directive: {e}")
+                raise ParseException("Error in .{}: {}".format(directive_name, e))
         else:
             # raise NotImplementedError(f"Directive '{directive_name}' is not implemented")
             pass  # todo> don't need to panic yet
@@ -313,7 +316,7 @@ class RV32Backend(AsmBackend):
         DEBUG_INFO(f'Passing assembly lines from {input}')
         parsed = Parser(self.mnemonics, self.symbol_table, self.base_addr)
         if len(parsed) <= 0:
-            raise ValueError(f'Provided input: {input} yielded nothing from parser. Check input.')
+            raise ParseException(f'Provided input: {input} yielded nothing from parser. Check input.')
 
         self.encoded = parsed
 
@@ -334,7 +337,7 @@ class RV32Backend(AsmBackend):
             DEBUG_INFO("Emitting code in nibble format...")
             return self.apply_nibble()
         else:
-            raise ValueError("Unsupported EmitCodeMode")
+            raise UnimplementedException("Unsupported EmitCodeMode: {}".format(mode))
 
     def apply_nibble(self) -> list:
         return ['\t'.join([elem[i:i + 4] for i in range(0, len(elem), 4)]) for elem in self.encoded]

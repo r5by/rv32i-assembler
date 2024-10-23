@@ -1,6 +1,9 @@
 from pathlib import Path
 import re
 
+from comm.exceptions import InvalidRegisterException
+
+
 def init_abi_alias():
 	path = Path(__file__).parent / "data/reg_abi_alias.dat"
 	rmap = {}
@@ -45,4 +48,4 @@ def reg_map(reg: str):
 			return abi_alias[reg]
 
 	# If none of the patterns match, raise an exception
-	raise ValueError(f"Invalid register name: {reg}")
+	raise InvalidRegisterException(reg)
