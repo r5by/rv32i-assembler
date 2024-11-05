@@ -366,7 +366,7 @@ class RV32InstrInfo(InstrInfo):
                 opcode
             )
 
-            canonicalizer = [rd_num, rs1_num, imm_12]
+            canonicalizer = [] # after encoding, return 0-args for emulator to process later on
         else:
             # Standard I-type instructions: rd, rs1, imm
             rd_num = RV32InstrInfo.extract_reg_num(rd)

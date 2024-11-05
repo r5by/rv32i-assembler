@@ -1,11 +1,15 @@
 import os.path
 import typing
 from comm.colors import *
+from comm.logging import INFO
 from comm.exceptions import LaunchDebuggerException
 
 HIST_FILE = os.path.join(os.path.expanduser("~"), ".rv32emu_history")
 
-from . import CPU, TranslatableInstruction
+from . import TranslatableInstruction
+
+if typing.TYPE_CHECKING:
+    from . import CPU
 
 
 def launch_debug_session(cpu: "CPU", prompt=""):
@@ -33,11 +37,11 @@ def launch_debug_session(cpu: "CPU", prompt=""):
             mmu.dump(what, *args, **kwargs)
 
     def dump_stack(*args, **kwargs):
-        mmu.dump(regs.get("sp"), *args, **kwargs)
+        mmu.dump(regs.get_by_name("sp"), *args, **kwargs)
 
     def ins():
-        print("Current instruction at 0x{:08X}:".format(cpu.pc))
-        return mmu.read_ins(cpu.pc)
+        current_instruction = mmu.read_ins(cpu.pc)
+        INFO("Current instruction at 0x{:08X}: {}".format(cpu.pc, current_instruction))
 
     #todo>
     def run_ins(name, *args: str):
@@ -63,6 +67,18 @@ def launch_debug_session(cpu: "CPU", prompt=""):
             cpu.step()
         except LaunchDebuggerException:
             return
+
+    # aliases here
+    aliases = {
+        'c': cont,
+        's': step,
+        'd': dump,
+        'ds': dump_stack,
+        'ri': run_ins,
+    }
+
+    # Add aliases to locals
+    locals().update(aliases)
 
     # collect all variables
     sess_vars = globals()

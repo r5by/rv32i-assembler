@@ -5,9 +5,7 @@ from comm.logging import DEBUG_INFO, INFO
 from comm.colors import FMT_CPU, FMT_NONE, FMT_DEBUG
 from comm.int32 import Int32, UInt32
 from comm.exceptions import ASSERT_LEN, LaunchDebuggerException, RV32IBaseException
-
-if typing.TYPE_CHECKING:
-    from .debug import launch_debug_session
+from .debug import launch_debug_session
 
 from . import (
     Instruction,
@@ -336,7 +334,7 @@ class RV32I(ISA):
 
     def instruction_ret(self, ins: "Instruction"):
         ASSERT_LEN(ins.args, 0)
-        self.cpu.pc = self.regs.get("ra").unsigned_value
+        self.cpu.pc = self.regs.get_by_name("ra").unsigned_value
 
     def instruction_ebreak(self, ins: "Instruction"):
         self.instruction_sbreak(ins)
@@ -349,6 +347,10 @@ class RV32I(ISA):
             + FMT_NONE
         )
         raise LaunchDebuggerException()
+
+    def instruction_ecall(self, ins: "Instruction"):
+        ASSERT_LEN(ins.args, 0)
+        pass
 
     def instruction_nop(self, ins: "Instruction"):
         ASSERT_LEN(ins.args, 0)
