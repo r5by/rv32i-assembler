@@ -1,10 +1,12 @@
 import os
 import re
 import subprocess
-from asm.utils import get_filelist_with_pattern
+from comm.utils import get_filelist_with_pattern
 
 CONF_FILE = 'test.cfg'
 
+
+# todo> fix filecheck
 def parse_conf_by_key(conf: str, key: str):
     with open(conf, 'r') as f:
         res = None
@@ -38,7 +40,7 @@ def run_filecheck(filecheck_src):
 
     # Ensure that the executables exist
     if not os.path.isfile(cmdline_path):
-        raise Exception(f"Error: llvm-mc not found at {cmdline_path}")
+        raise Exception(f"Error: rv32 cmd not found at {cmdline_path}")
 
     if not os.path.isfile(file_check_path):
         raise Exception(f"Error: FileCheck not found at {file_check_path}")
@@ -46,6 +48,10 @@ def run_filecheck(filecheck_src):
     # Construct the command arguments
     rv32i_cmd = ["python3", cmdline_path, "-s", filecheck_src, "-show-encoding"]
     file_check_cmd = [file_check_path, "-check-prefixes=CHECK-ASM", filecheck_src]
+
+    # Convert the list to a string and print it
+    print_cmd = ' '.join(rv32i_cmd)
+    print(print_cmd)
 
     try:
         # Start the llvm-mc process
@@ -55,7 +61,7 @@ def run_filecheck(filecheck_src):
             stderr=subprocess.PIPE
         )
 
-        # Start the FileCheck process, reading from llvm-mc's stdout
+        # Start the FileCheck process, reading from cmd's stdout
         file_check_process = subprocess.Popen(
             file_check_cmd,
             stdin=rv32_process.stdout,
@@ -70,15 +76,15 @@ def run_filecheck(filecheck_src):
         file_check_stdout, file_check_stderr = file_check_process.communicate()
 
         # Wait for llvm_mc_process to finish and get stderr
-        llvm_mc_stderr = rv32_process.stderr.read()
+        cmd_stderr = rv32_process.stderr.read()
         rv32_process.stderr.close()
         rv32_process.wait()
 
-        # Check for errors in llvm-mc process
+        # Check for errors in cmd process
         if rv32_process.returncode != 0:
-            print(f"Error: llvm-mc exited with return code {rv32_process.returncode}")
-            print("llvm-mc stderr:")
-            print(llvm_mc_stderr.decode())
+            print(f"Error: cmd exited with return code {rv32_process.returncode}")
+            print("cmd stderr:")
+            print(cmd_stderr.decode())
             return
 
         # Check for errors in FileCheck process
@@ -169,3 +175,5 @@ if __name__ == "__main__":
     fc_list = get_filelist_with_pattern(pat='*-valid.s', src_dir=asm_dir)
     for fc in fc_list:
         run_filecheck(fc)
+
+

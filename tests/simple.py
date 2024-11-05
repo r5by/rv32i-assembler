@@ -1,4 +1,4 @@
-from asm.utils import get_path
+from comm.utils import get_path
 from asm.asm_backend import AsmBackend
 
 if __name__ == '__main__':

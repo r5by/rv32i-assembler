@@ -320,6 +320,12 @@ class RV32Backend(AsmBackend):
 
         self.encoded = parsed
 
+    def analyze_lines(self):
+        ana = Parser.interpret(self.mnemonics, self.symbol_table, self.base_addr)
+        if not ana:
+            raise ParseException(f'Parsing assembly failed')
+
+        return ana
 
     def emit_code(self, mode: EmitCodeMode = EmitCodeMode.HEX):
 

@@ -4,9 +4,9 @@ import select
 import argparse
 from asm.asm_backend import RV32Backend, EmitCodeMode
 from comm.logging import *
-from asm.utils import write_to_file
+from comm.utils import write_to_file
 from comm.exceptions import RV32IBaseException
-
+from emu.emulator import RV32IEmulator
 
 def parse_cmd():
     # Create the argument parser
@@ -24,7 +24,9 @@ def parse_cmd():
     parser.add_argument("-lst", "--list", type=str, help="output list file for validation, default to %s.lst")
 
     parser.add_argument("-s", "--assemble", type=str, help="input file (.s) to be assembled")
-    parser.add_argument("-base", "--base-addr", type=int, default=0x8000, help="base address to assemble the code upon")
+    parser.add_argument("-base", "--base-addr", type=int, default=0x80100, help="base address to assemble the code "
+                                                                                "upon")
+    parser.add_argument("-emu", "--emulator", action="store_true", help="launch emulator")
 
     # Parse the arguments
     args = parser.parse_args()
@@ -71,8 +73,15 @@ def parse_cmd():
         e.print_stacktrace()
         sys.exit(-1)
 
-    mnemonics = mc.mnemonics
+    if args.emulator:
+        emulator = RV32IEmulator(mc)
 
+        emulator.instantiate_cpu()
+        emulator.load_programs()
+        emulator.launch()
+        sys.exit(0)
+
+    mnemonics = mc.mnemonics
     # show encoding in hex format for CheckFile usage
     hex_encoded = mc.emit_code(EmitCodeMode.HEX)
 

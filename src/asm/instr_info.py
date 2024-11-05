@@ -1,14 +1,21 @@
 import re
 
-from comm.exceptions import ParseException, InvalidRegisterException, UnknownAssemblyException, UnimplementedException
+from comm.exceptions import ParseException, InvalidRegisterException, UnimplementedException
 from comm.logging import DEBUG_INFO
-from asm.utils import load_json_config
+from comm.utils import load_json_config, format_imm
 from enum import Enum, auto
-from typing import Dict, List, Union, Callable
+from typing import Dict, List, Union, Callable, Iterable
 from abc import ABC, abstractmethod
 from asm.reg_info import reg_map
 
 __all__ = ['RV32InstrInfo']
+
+INS_XLEN: int = 4
+
+format_imm12 = lambda imm: format_imm(imm, 12)
+format_imm13 = lambda imm: format_imm(imm, 13)
+format_imm20 = lambda imm: format_imm(imm, 20)
+format_imm21 = lambda imm: format_imm(imm, 21)
 
 # Enum for instruction types
 class InstructionType(Enum):
@@ -44,7 +51,7 @@ class RV32InstrInfo(InstrInfo):
     def __init__(self, isa_config_file: str):
         super().__init__(isa_config_file)
 
-    def parse(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses an instruction and returns its binary representation.
 
@@ -117,16 +124,17 @@ class RV32InstrInfo(InstrInfo):
         return imm, reg
 
     # Parsing methods for each instruction type
-    def parse_S_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_S_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses an S-type instruction.
 
         Args:
             op (str): Instruction mnemonic.
-            args (List[Union[str, int]]): [rs2, imm, rs1]
+            args (List[Union[str, int]]): [rs2, rs1, imm] or [rs2, imm(rs1)]
 
         Returns:
             str: Binary representation of the instruction.
+            [int]: [rs2_num, rs1_num, imm]
         """
         # S-type instructions mapping
         instr_map = {
@@ -153,7 +161,8 @@ class RV32InstrInfo(InstrInfo):
         rs2_num = RV32InstrInfo.extract_reg_num(rs2)
 
         # Handle immediate value (12 bits, sign-extended)
-        imm_12 = int(imm) & 0xFFF  # Mask to 12 bits
+        # imm_12 = int(imm) & 0xFFF  # Mask to 12 bits
+        imm_12 = format_imm12(imm)
 
         # Split immediate into imm[11:5] and imm[4:0]
         imm_11_5 = (imm_12 >> 5) & 0x7F  # 7 bits
@@ -173,9 +182,9 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, [rs2_num, rs1_num, imm_12]
 
-    def parse_R_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_R_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses an R-type instruction.
 
@@ -185,6 +194,7 @@ class RV32InstrInfo(InstrInfo):
 
         Returns:
             str: Binary representation of the instruction.
+            [int]: [rd_num, rs1_num, rs2_num]
         """
         # R-type instructions mapping
         instr_map = {
@@ -232,9 +242,9 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, [rd_num, rs1_num, rs2_num]
 
-    def parse_I_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_I_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses an I-type instruction.
 
@@ -244,6 +254,7 @@ class RV32InstrInfo(InstrInfo):
 
         Returns:
             str: Binary representation of the instruction.
+            [int]: [rd, rs1, imm]
         """
         # I-type instructions mapping
         instr_map = {
@@ -296,6 +307,8 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
+
+            canonicalizer = [rd_num, rs1_num, shamt_6]
         elif op == 'jalr':
             # JALR instruction: rd, rs1, imm
             # todo> support all forms of jalr instructions:
@@ -305,7 +318,7 @@ class RV32InstrInfo(InstrInfo):
             rd_num = RV32InstrInfo.extract_reg_num(rd)
             rs1_num = RV32InstrInfo.extract_reg_num(rs1)
 
-            imm_12 = int(imm) & 0xFFF  # Mask to 12 bits
+            imm_12 = format_imm12(imm)
             # Assemble the instruction bits
             instruction = (
                 (imm_12 << 20) |
@@ -314,12 +327,14 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
+
+            canonicalizer = [rd_num, rs1_num, imm_12]
         elif op in ['lb', 'lh', 'lw', 'lbu', 'lhu']:
             # Load instructions: rd, imm, rs1
             rd_num = RV32InstrInfo.extract_reg_num(rd)
             rs1_num = RV32InstrInfo.extract_reg_num(rs1)
 
-            imm_12 = int(imm) & 0xFFF  # Mask to 12 bits
+            imm_12 = format_imm12(imm)
 
             # Assemble the instruction bits
             instruction = (
@@ -329,6 +344,8 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
+
+            canonicalizer = [rd_num, rs1_num, imm_12]
         elif op in ['ecall', 'ebreak']:
             # System instructions
             # ecall and ebreak have fixed encodings
@@ -348,11 +365,14 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
+
+            canonicalizer = [rd_num, rs1_num, imm_12]
         else:
             # Standard I-type instructions: rd, rs1, imm
             rd_num = RV32InstrInfo.extract_reg_num(rd)
             rs1_num = RV32InstrInfo.extract_reg_num(rs1)
-            imm_12 = int(imm) & 0xFFF  # Mask to 12 bits
+            # imm_12 = int(imm) & 0xFFF  # Mask to 12 bits, only works for positive immediate number!!
+            imm_12 = format_imm12(imm)
 
             # Assemble the instruction bits
             instruction = (
@@ -362,14 +382,15 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
+            canonicalizer = [rd_num, rs1_num, imm_12]
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, canonicalizer
 
-    def parse_B_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_B_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses a B-type instruction.
 
@@ -379,6 +400,7 @@ class RV32InstrInfo(InstrInfo):
 
         Returns:
             str: Binary representation of the instruction.
+            cano: [rs1, rs2, imm]
         """
         # B-type instructions mapping
         instr_map = {
@@ -405,7 +427,8 @@ class RV32InstrInfo(InstrInfo):
 
         rs1_num = RV32InstrInfo.extract_reg_num(rs1)
         rs2_num = RV32InstrInfo.extract_reg_num(rs2)
-        imm_13 = int(imm) & 0x1FFF  # Mask to 13 bits
+        # imm_13 = int(imm) & 0x1FFF  # Mask to 13 bits
+        imm_13 = format_imm13(imm)
 
         # Extract bits of the immediate value
         imm_12 = (imm_13 >> 12) & 0x1    # Bit 12
@@ -431,9 +454,9 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, [rs1_num, rs2_num, imm_13]
 
-    def parse_U_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_U_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses a U-type instruction.
 
@@ -443,6 +466,7 @@ class RV32InstrInfo(InstrInfo):
 
         Returns:
             str: Binary representation of the instruction.
+            [rd, imm]
         """
         # U-type instructions mapping
         instr_map = {
@@ -471,7 +495,8 @@ class RV32InstrInfo(InstrInfo):
         imm = eval(imm) if is_expr(imm) else int(imm)
 
         rd_num = RV32InstrInfo.extract_reg_num(rd)
-        imm_20 = int(imm) & 0xFFFFF  # Mask to 20 bits
+        # imm_20 = int(imm) & 0xFFFFF  # Mask to 20 bits
+        imm_20 = format_imm20(imm)
 
         # Assemble the instruction bits
         instruction = (
@@ -484,9 +509,9 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, [rd_num, imm_20]
 
-    def parse_J_type(self, op: str, args: List[Union[str, int]]) -> str:
+    def parse_J_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
         Parses a J-type instruction.
 
@@ -516,7 +541,8 @@ class RV32InstrInfo(InstrInfo):
         imm = eval(imm) if is_expr(imm) else int(imm)
 
         rd_num = RV32InstrInfo.extract_reg_num(rd)
-        imm_21 = int(imm) & 0x1FFFFF  # Mask to 21 bits
+        # imm_21 = int(imm) & 0x1FFFFF  # Mask to 21 bits
+        imm_21 = format_imm21(imm)
 
         # Extract bits of the immediate value
         imm_20 = (imm_21 >> 20) & 0x1  # Bit 20
@@ -563,7 +589,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG_INFO(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr
+        return bin_instr, [rd_num, imm_21]
 
 
 rv32i = RV32InstrInfo('./data/rv32i.json')
@@ -571,15 +597,16 @@ rv32i = RV32InstrInfo('./data/rv32i.json')
 def is_expr(input_str: str) -> bool:
     # Define token specifications with 'OP' before 'NUMBER'
     token_specification = [
+        ('NUMBER', r'[+-]?('
+                   r'0[bB][01]+|'
+                   r'0[xX][0-9a-fA-F]+|'
+                   r'0[oO][0-7]+|'
+                   r'[1-9][0-9]*|'
+                   r'0)'
+         ),  # Integer literals
         ('OP', r'\+|\-|\*|/|<<|>>|&|\||\^'),  # Binary Operators
         ('UNARY_OP', r'~|!'),  # Unary Operators
-        ('NUMBER',   r'[+-]?('
-                     r'0[bB][01]+|'
-                     r'0[xX][0-9a-fA-F]+|'
-                     r'0[oO][0-7]+|'
-                     r'[1-9][0-9]*|'
-                     r'0)'
-                     ),   # Integer literals
+
         ('LPAREN',   r'\('),                  # Left Parenthesis
         ('RPAREN',   r'\)'),                  # Right Parenthesis
         ('SKIP',     r'[ \t]+'),              # Skip over spaces and tabs

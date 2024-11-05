@@ -2,6 +2,7 @@ import os
 import glob
 import json
 import inspect
+from comm.exceptions import ParseException
 
 
 def get_path(dir: str) -> str:
@@ -89,3 +90,39 @@ def load_json_config(conf: str):
         json_data = json.load(file)
 
     return json_data
+
+def parse_numeric_argument(arg: str) -> int:
+    """
+    parse hex or int strings
+    """
+    try:
+        if arg.lower().startswith("0x"):
+            return int(arg, 16)
+        return int(arg)
+    except ValueError as ex:
+        raise ParseException(
+            'Invalid immediate argument "{}", maybe missing symbol?'.format(arg), ex
+        )
+
+def align_addr(addr: int, to_bytes: int = 8) -> int:
+    """
+    align an address to `to_bytes` (meaning addr & to_bytes = 0)
+
+    This will increase the address
+    """
+    return addr + (-addr % to_bytes)
+
+
+def format_imm(imm, n):
+    """
+     Format negative/positive immediate value to the n-bit 2's-compliment format
+    """
+    # Mask the immediate value to n-bits
+    mask = (1 << n) - 1
+    imm_n = imm & mask  # Keep only the lower n bits
+
+    # Check if the sign bit of an n-bit number is set (two's complement check)
+    if imm_n >= (1 << (n - 1)):
+        imm_n -= (1 << n)  # Adjust for two's complement if the number is negative
+
+    return imm_n

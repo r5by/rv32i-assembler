@@ -1,9 +1,3 @@
-"""
-RiscEmu (c) 2024 Luke Li
-
-SPDX-License-Identifier: MIT
-"""
-
 # Define the basic color and style format strings
 FMT_RED = "\033[31m"
 FMT_ORANGE = "\033[33m"
