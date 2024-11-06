@@ -26,14 +26,14 @@ class _Parser:
 		int_code = []
 		code = [e.strip() for e in code]
 		for line_num, line in enumerate(code):
-			DEBUG_INFO(f'Interpreting: {line}')
+			DEBUG(f'Interpreting: {line}')
 			tokens = _Parser.tokenize(line)
 			tokens = _Parser.canonicalize(tokens, st)
 
 			if tokens:
 				encoded_instruction = _Parser.encode(tokens)
 				int_code.append(encoded_instruction)
-				DEBUG_INFO('Succeeded!')
+				DEBUG('Succeeded!')
 
 		return int_code
 
@@ -44,7 +44,7 @@ class _Parser:
 		code = [e.strip() for e in code]
 		pc = base
 		for line_num, line in enumerate(code):
-			DEBUG_INFO(f'Interpreting: {line}')
+			DEBUG(f'Interpreting: {line}')
 			tokens = _Parser.tokenize(line)
 			tokens = _Parser.canonicalize(tokens, st)
 

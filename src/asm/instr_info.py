@@ -1,7 +1,7 @@
 import re
 
 from comm.exceptions import ParseException, InvalidRegisterException, UnimplementedException
-from comm.logging import DEBUG_INFO
+from comm.logging import DEBUG
 from comm.utils import load_json_config, format_imm
 from enum import Enum, auto
 from typing import Dict, List, Union, Callable, Iterable
@@ -66,7 +66,7 @@ class RV32InstrInfo(InstrInfo):
             raise ParseException("Unsupported instruction: {}".format(op))
 
         instr_type = self.instr_map[op]
-        DEBUG_INFO(f'determining type of {op}: {instr_type.name}')
+        DEBUG(f'determining type of {op}: {instr_type.name}')
         parse_method = self.get_parse_method(instr_type)
         return parse_method(op, args)
 
@@ -180,7 +180,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, [rs2_num, rs1_num, imm_12]
 
@@ -240,7 +240,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, [rd_num, rs1_num, rs2_num]
 
@@ -386,7 +386,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, canonicalizer
 
@@ -452,7 +452,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, [rs1_num, rs2_num, imm_13]
 
@@ -507,7 +507,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, [rd_num, imm_20]
 
@@ -587,7 +587,7 @@ class RV32InstrInfo(InstrInfo):
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
-        DEBUG_INFO(f'binary encoding completed: {bin_instr}')
+        DEBUG(f'binary encoding completed: {bin_instr}')
 
         return bin_instr, [rd_num, imm_21]
 

@@ -2,7 +2,7 @@ from email.mime.multipart import MIMEMultipart
 
 from asm import RV32Backend
 from asm.instr_info import rv32i
-from comm.logging import DEBUG_INFO
+from comm.logging import DEBUG
 from .cpu import CPU, MMU, RV32I
 from typing import Optional, Type, List
 

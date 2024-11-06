@@ -1,7 +1,7 @@
 import typing
 from abc import ABC, abstractmethod
 from typing import List, Type, Dict, Callable, Optional, Union, Set, Iterable, Tuple
-from comm.logging import DEBUG_INFO, INFO
+from comm.logging import DEBUG, INFO
 from comm.colors import FMT_CPU, FMT_NONE, FMT_DEBUG
 from comm.int32 import Int32, UInt32
 from comm.exceptions import ASSERT_LEN, LaunchDebuggerException, RV32IBaseException
@@ -438,7 +438,7 @@ class CPU(ABC):
             ins = self.mmu.read_ins(self.pc)
 
             ins_str = str(ins)
-            DEBUG_INFO(FMT_CPU + "   0x{:08X}:{} {}".format(self.pc, FMT_NONE, ins_str))
+            DEBUG(FMT_CPU + "   0x{:08X}:{} {}".format(self.pc, FMT_NONE, ins_str))
 
             self.pc += self.INS_XLEN
             self.run_instruction(ins)
@@ -463,7 +463,7 @@ class CPU(ABC):
         while not self.halted:
             self.step()
 
-        DEBUG_INFO(
+        DEBUG(
             FMT_CPU
             + "[CPU] Program exited with code {}".format(self.exit_code)
             + FMT_NONE
@@ -495,7 +495,7 @@ class CPU(ABC):
         self.initialize_registers()
         self.setup_csr()
 
-        DEBUG_INFO(
+        DEBUG(
             FMT_CPU
             + "[CPU] Started running from {}".format(
                 entrypoint

@@ -224,7 +224,7 @@ class RV32Backend(AsmBackend):
                 translatable_line_cnt += 1
             #endregion
 
-        DEBUG_INFO(f'Preprocess is completed with {translatable_line_cnt} assembly instructions in total')
+        DEBUG(f'Preprocess is completed with {translatable_line_cnt} assembly instructions in total')
 
     def handle_directives(self, directive_name: str, directive_args: str):
         """
@@ -313,7 +313,7 @@ class RV32Backend(AsmBackend):
         return line  # No macro expansion needed
 
     def parse_lines(self, asm: Optional[str] = None):
-        DEBUG_INFO(f'Passing assembly lines from {input}')
+        DEBUG(f'Passing assembly lines from {input}')
         parsed = Parser(self.mnemonics, self.symbol_table, self.base_addr)
         if len(parsed) <= 0:
             raise ParseException(f'Provided input: {input} yielded nothing from parser. Check input.')
@@ -330,17 +330,17 @@ class RV32Backend(AsmBackend):
     def emit_code(self, mode: EmitCodeMode = EmitCodeMode.HEX):
 
         if mode == EmitCodeMode.HEX:
-            DEBUG_INFO("Emitting code in hexadecimal format...")
+            DEBUG("Emitting code in hexadecimal format...")
             return self.apply_hex()
         elif mode == EmitCodeMode.BIN:
-            DEBUG_INFO("Emitting code in binary format...")
+            DEBUG("Emitting code in binary format...")
             return self.encoded
         elif mode == EmitCodeMode.LST:
-            DEBUG_INFO("Emitting code in list format...")
+            DEBUG("Emitting code in list format...")
             # todo> add list
             return self.to_list()
         elif mode == EmitCodeMode.NIB:
-            DEBUG_INFO("Emitting code in nibble format...")
+            DEBUG("Emitting code in nibble format...")
             return self.apply_nibble()
         else:
             raise UnimplementedException("Unsupported EmitCodeMode: {}".format(mode))

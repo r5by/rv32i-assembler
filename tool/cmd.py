@@ -62,7 +62,7 @@ def parse_cmd():
 
         assembly_code = sys.stdin.read()
 
-    DEBUG_INFO(f'Reading in assembly code:\n {assembly_code}')
+    DEBUG(f'Reading in assembly code:\n {assembly_code}')
 
     # Handle output files
     try:

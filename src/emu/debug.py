@@ -1,7 +1,8 @@
 import os.path
+import sys
 import typing
 from comm.colors import *
-from comm.logging import INFO
+from comm.logging import DEBUGGER_INFO
 from comm.exceptions import LaunchDebuggerException
 
 HIST_FILE = os.path.join(os.path.expanduser("~"), ".rv32emu_history")
@@ -41,7 +42,7 @@ def launch_debug_session(cpu: "CPU", prompt=""):
 
     def ins():
         current_instruction = mmu.read_ins(cpu.pc)
-        INFO("Current instruction at 0x{:08X}: {}".format(cpu.pc, current_instruction))
+        DEBUGGER_INFO("Current instruction at 0x{:08X}: {}\n".format(cpu.pc, current_instruction))
 
     #todo>
     def run_ins(name, *args: str):
