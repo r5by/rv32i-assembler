@@ -1,7 +1,9 @@
 import typing
 from abc import ABC, abstractmethod
 from typing import List, Type, Dict, Callable, Optional, Union, Set, Iterable, Tuple
-from comm.logging import DEBUG, INFO
+
+from asm.instr_info import INS_XLEN
+from comm.logging import DEBUG, INFO, WARN
 from comm.colors import FMT_CPU, FMT_NONE, FMT_DEBUG
 from comm.int32 import Int32, UInt32
 from comm.exceptions import ASSERT_LEN, LaunchDebuggerException, RV32IBaseException
@@ -11,7 +13,7 @@ from . import (
     Instruction,
     Immediate,
     MMU,
-    Registers,
+    RF,
     CSR,
     PrivModes
 )
@@ -120,7 +122,7 @@ class ISA(ABC):
         return self.cpu.mmu
 
     @property
-    def regs(self) -> Registers:
+    def regs(self) -> RF:
         return self.cpu.regs
 
     def __repr__(self):
@@ -343,7 +345,7 @@ class RV32I(ISA):
         ASSERT_LEN(ins.args, 0)
         INFO(
             FMT_DEBUG
-            + "Debug instruction encountered at 0x{:08X}".format(self.cpu.pc - 1)
+            + "Debug instruction encountered at 0x{:08X}".format(self.cpu.pc - INS_XLEN*1)
             + FMT_NONE
         )
         raise LaunchDebuggerException()
@@ -378,10 +380,10 @@ class CPU(ABC):
     INS_XLEN: int = 4
 
     # housekeeping variables
-    regs: Registers
+    regs: RF
 
     mmu: MMU
-    pc: int
+    pc: UInt32
     cycle: int
     halted: bool
 
@@ -399,7 +401,7 @@ class CPU(ABC):
 
     def __init__(self, mmu: MMU, isa: Type["ISA"]):
         self.mmu = mmu
-        self.regs = Registers()
+        self.regs = RF()
         self.instr_handlers = dict()
 
         #register isa
@@ -408,7 +410,7 @@ class CPU(ABC):
 
         self.halted = False
         self.cycle = 0
-        self.pc = 0
+        self.pc = UInt32(0)
         self.hart_id = 0
         self.debugger_active = False
         self.csr = CSR()
@@ -448,16 +450,16 @@ class CPU(ABC):
                 if self.debugger_active:
                     raise ex
 
-                print(FMT_CPU + "[CPU] Debugger launch requested!" + FMT_NONE)
+                WARN(FMT_CPU + "[CPU] Debugger launch requested!" + FMT_NONE)
                 launch_debugger = True
             else:
-                print(ex.message())
+                INFO(ex.message())
                 ex.print_stacktrace()
-                print(FMT_CPU + "[CPU] Halting due to exception!" + FMT_NONE)
+                WARN(FMT_CPU + "[CPU] Halting due to exception!" + FMT_NONE)
                 self.halted = True
 
         if launch_debugger:
-            launch_debug_session(self)
+            launch_debug_session(self) # todo> delete history file at exception
 
     def run(self):
         while not self.halted:

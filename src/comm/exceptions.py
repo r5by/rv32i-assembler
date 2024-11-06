@@ -61,6 +61,17 @@ class InvalidRegisterException(RV32IBaseException):
             + FMT_NONE
         )
 
+class InvalidAddressException(RV32IBaseException):
+    def __init__(self, addr):
+        self.addr = addr
+
+    def message(self):
+        return (
+            FMT_CPU
+            + f"{self.__class__.__name__}(Invalid address: 0x{self.addr:08X})"
+            + FMT_NONE
+        )
+
 class NumberFormatException(RV32IBaseException):
     def __init__(self, msg):
         super().__init__(msg)

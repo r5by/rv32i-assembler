@@ -3,11 +3,15 @@ from collections import defaultdict
 from comm.colors import *
 from comm.exceptions import InvalidRegisterException
 from comm.int32 import Int32, UInt32
-from comm.logging import INFO
+from comm.logging import INFO, ERROR
 
 ONE_LINE = False
 
-class Registers:
+RF_LEN = 4  # registers in rv32i are all 4 bytes
+COL_WIDTH = len("zero=0x00000000")  # dummy entry in each column
+COL_SEP = "-"*COL_WIDTH + " "  # column seperator (underline)
+
+class RF:
     """
     Represents RV32I related registers
     """
@@ -48,6 +52,14 @@ class Registers:
         "t6": 31    # Temporary
     }
 
+    alias_2_len = {
+        "a": 8,
+        "s": 12,
+        "t": 7
+    }
+
+    max_alias_len = max(alias[1] for alias in alias_2_len.items())  # maximum number of aliased register (`s` for rv32i)
+
     def __init__(self):
         # canonized registers (x<num>) to its saved value
         self.vals: dict[int, Int32] = defaultdict(UInt32)
@@ -55,26 +67,24 @@ class Registers:
         self.last_set = None
         self.last_read = None
 
+        self.size = len(self.valid_regs) # total number of GPRs
+
     def is_reg_valid(self, reg: str) -> bool:
         return reg in self.valid_regs.keys()
 
-    def dump(self):
+    def is_reg_type_valid(self, t: str) -> bool:
+        return t in self.alias_2_len.keys()
+
+    def dump_all(self):
         """
         Dump all registers to stdout
-
         """
-        named_regs = [self._reg_repr(reg) for reg in Registers.named_registers()]
+        named_regs = [self._reg_repr(reg) for reg in RF.named_registers()]
 
-        lines: list[list[str]] = [[] for _ in range(12)]
+        lines: list[list[str]] = [[] for _ in range(self.max_alias_len)]
 
-        regs = [
-            ("a", 8),
-            ("s", 12),
-            ("t", 7),
-        ]
-
-        for name, s in regs:
-            for i in range(12):
+        for name, s in self.alias_2_len.items():
+            for i in range(self.max_alias_len):
                 if i >= s:
                     lines[i].append(" " * 15)
                 else:
@@ -91,27 +101,50 @@ class Registers:
         # print named registers
         if ONE_LINE:
             INFO("\t" + " ".join(named_regs))
-            INFO("\t" + "--------------- " * 6)
+            INFO("\t" + COL_SEP * 6)
         else:
             INFO("\t" + " ".join(named_regs[0:3]))
             INFO("\t" + " ".join(named_regs[3:]))
-            INFO("\t" + "--------------- " * 3)
+            INFO("\t" + COL_SEP * 3)
 
         # print a, s, t registers
         for line in lines:
             INFO("\t" + " ".join(line))
 
-    def dump_reg_a(self):
+    def dump_by_type(self, t: str):
         """
         Dump the a-type registers
         """
+        if not self.is_reg_type_valid(t):
+            ERROR(f'Invalid type: {t}')
+            return
+
         INFO(
-            "Registers[a]:"
-            + " ".join(self._reg_repr("a{}".format(i)) for i in range(8))
+            f"Dumping {t}-type registers:\n"
+            + ";\n".join(self._reg_repr("{}{}".format(t, i)) for i in range(self.alias_2_len[t]))
+        )
+
+    def dump_by_range(self, t: str, l: int, r: int):
+        if not self.is_reg_type_valid(t):
+            ERROR(f'Invalid type: {t}')
+            return
+
+        INFO(
+            f"Dumping {t}-type registers in given range ({l} to {r}):\n"
+            + ";\n".join(self._reg_repr("{}{}".format(t, i)) for i in range(l, r))
+        )
+
+    def dump_by_name(self, reg: str):
+        if not self.is_reg_valid(reg):
+            ERROR(f'Invalid register: {reg}')
+            return
+
+        INFO(
+            f'Dumping register: {self._reg_repr(reg)}'
         )
 
     def _reg_repr(self, reg: str, name_len=4, fmt="08X"):
-        txt = "{:{}}=0x{:{}}".format(reg, name_len, self.get(reg, False), fmt)
+        txt = "{:{}}=0x{:{}}".format(reg, name_len, self.get_by_name(reg, False), fmt)
         if reg == self.last_set:
             return FMT_ORANGE + FMT_BOLD + txt + FMT_NONE
         if reg == self.last_read:
@@ -147,6 +180,9 @@ class Registers:
         return True
 
     def get_by_name(self, reg: str, mark_read: bool = True) -> Int32:
+        if not self.is_reg_valid(reg):
+            raise InvalidRegisterException(reg)
+
         reg_id = self.valid_regs[reg]
         return self.get(reg_id, mark_read)
 
@@ -181,5 +217,5 @@ class Registers:
         return 'todo'
 
 if __name__ == '__main__':
-    regs = Registers()
+    regs = RF()
     regs.dump()

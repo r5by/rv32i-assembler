@@ -3,7 +3,7 @@ T_RelativeAddress = int
 T_AbsoluteAddress = int
 
 from .instruction import Instruction, Immediate, InstructionWithEncoding, TranslatableInstruction
-from .registers import Registers
+from .rf import RF
 from .csr import CSR
 from .mmu import MMU
 from .privmodes import PrivModes
@@ -21,7 +21,7 @@ from comm.exceptions import (
 __all__ = [
     "MMU",
     "CSR",
-    "Registers",
+    "RF",
     "CPU",
     "Instruction",
     "Immediate",

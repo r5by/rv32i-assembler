@@ -6,10 +6,12 @@ SPDX-License-Identifier: MIT
 
 from typing import Dict, List, Optional, Union
 
-from comm.int32 import Int32, UInt32
+from comm.exceptions import InvalidAddressException
+from comm.int32 import UInt32
+from comm.logging import INFO, ERROR
+from comm.colors import FMT_BOLD
 from . import (
     Instruction,
-    T_AbsoluteAddress,
     TranslatableInstruction
 )
 
@@ -39,7 +41,7 @@ class MMU:
     """
      The program base point
     """
-    base: int
+    base: UInt32
     size: int
 
     def __init__(self, base_addr, symbol_table):
@@ -47,10 +49,10 @@ class MMU:
         Create a new MMU
         """
         self.st = symbol_table
-        self.base = base_addr
+        self.base = UInt32(base_addr)
         self.program = {} # abs_addr => translatable assembly code
 
-    def read_ins(self, addr: T_AbsoluteAddress) -> Instruction:
+    def read_ins(self, addr: UInt32) -> Instruction:
         """
         Read a single instruction located at addr
 
@@ -59,7 +61,7 @@ class MMU:
         """
         return self.program[addr]
 
-    def read(self, addr: Union[int, Int32], size: int) -> bytearray:
+    def read(self, addr: Union[int, UInt32], size: int) -> bytearray:
         """
         Read size bytes of memory at addr
 
@@ -79,15 +81,25 @@ class MMU:
         """
         pass
 
-    def dump(self, addr, *args, **kwargs):
+    def dump(self, addr: UInt32, *args, **kwargs):
         """
-        Dumpy the memory contents
+        Dumpy the memory contents (instructions only for this simple example)
 
         :param addr: The address at which to dump
         :param args: args for the dump function of the loaded memory section
         :param kwargs: kwargs for the dump function of the loaded memory section
         """
-        pass
+        if not self.is_valid_addr(addr):
+            # don't panic
+            return
+
+        t_addr = UInt32(addr)
+        mem_instr = self.read_ins(t_addr)
+        INFO(
+            FMT_BOLD
+            + f'0x{addr:08X}: {mem_instr}'
+        )
+
 
     def load_program(self, asms, align_to: int = 4):
         for addr, asm_cano in asms.items():
@@ -96,6 +108,22 @@ class MMU:
             trans_instr = TranslatableInstruction(name=instr_name, args=instr_args, addr=addr)
             self.program[addr] = trans_instr
 
+        self.size = len(asms)
 
-    def find_entrypoint(self) -> Optional[int]:
+    def find_entrypoint(self) -> Optional[UInt32]:
         return self.base
+
+    def is_valid_addr(self, addr: UInt32) -> bool:
+        if addr < self.base:
+            ERROR(f'Given address 0x{addr:08X} is below base address 0x{self.base:08X}.')
+            return False
+
+        if addr - self.base >> 2 >= self.size:
+            ERROR(f'Given address 0x{addr:08X} is out of memory range.')
+            return False
+
+        if addr.value & 3 != 0: # address must be aligned to 4 bytes
+            ERROR(f'Given address 0x{addr:08X} must be aligned by 4 bytes.')
+            return False
+
+        return True

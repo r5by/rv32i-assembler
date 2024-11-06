@@ -63,3 +63,11 @@ def WARN(message):
 def DEBUGGER_INFO(message):
     INFO(message)
     sys.stdout.flush()
+
+def DEBUGGER_ERROR(message):
+    logger.error(message)
+    sys.stdout.flush()
+
+def DEBUGGER_WARN(message):
+    WARN(message)
+    sys.stdout.flush()
