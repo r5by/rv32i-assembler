@@ -5,24 +5,31 @@ from comm.colors import *
 class CustomFormatter(logging.Formatter):
     # ANSI escape codes for colors
     COLORS = {
-        'DEBUG': FMT_DEBUG, # Magenta
+        'DEBUG': FMT_DEBUG,  # Magenta
         'INFO': FMT_INFO,  # Green
         'WARNING': FMT_WARNING,  # Yellow
         'ERROR': FMT_ERROR,  # Red
-        'CRITICAL': '\033[95m'
+        'CRITICAL': '\033[95m'  # Bright magenta
     }
     RESET = '\033[0m'
 
     def format(self, record):
-        msg = record.getMessage().strip()  # Get the message and strip any leading/trailing whitespace
+        # Record's message without altering white space
+        msg = record.getMessage()
         if not msg:  # Skip formatting if the message is empty
             return ''
 
         # Apply color based on the log level
         color = self.COLORS.get(record.levelname, self.RESET)
         formatted_lines = []
-        for line in msg.split('\n'):
-            formatted_lines.append(f"{self.formatTime(record)} {color}[{record.levelname}] {line}{self.RESET}")
+
+        # Keep track of line breaks and format each line individually
+        lines = msg.split('\n')
+        for line in lines:
+            line = line.rstrip()  # Strip only trailing whitespace to preserve alignment
+            formatted_line = f"{self.formatTime(record)} {color}[{record.levelname}] {line}{self.RESET}"
+            formatted_lines.append(formatted_line)
+
         return '\n'.join(formatted_lines)
 
 # Clear all handlers if previously set

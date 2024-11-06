@@ -5,6 +5,7 @@ from comm.exceptions import InvalidRegisterException
 from comm.int32 import Int32, UInt32
 from comm.logging import INFO
 
+ONE_LINE = False
 
 class Registers:
     """
@@ -57,22 +58,21 @@ class Registers:
     def is_reg_valid(self, reg: str) -> bool:
         return reg in self.valid_regs.keys()
 
-    def dump(self, full: bool = False):
+    def dump(self):
         """
         Dump all registers to stdout
-        :param full: If True, floating point registers are dumped too
+
         """
         named_regs = [self._reg_repr(reg) for reg in Registers.named_registers()]
 
         lines: list[list[str]] = [[] for _ in range(12)]
-        if not full:
-            regs = [("a", 8), ("s", 12), ("t", 7)]
-        else:
-            regs = [
-                ("a", 8),
-                ("s", 12),
-                ("t", 7),
-            ]
+
+        regs = [
+            ("a", 8),
+            ("s", 12),
+            ("t", 7),
+        ]
+
         for name, s in regs:
             for i in range(12):
                 if i >= s:
@@ -82,21 +82,24 @@ class Registers:
                     lines[i].append(self._reg_repr(reg))
 
         INFO(
-            "Registers[{},{}](".format(
+            "Registers[{},{}]:".format(
                 FMT_ORANGE + FMT_UNDERLINE + "read" + FMT_NONE,
                 FMT_ORANGE + FMT_BOLD + "written" + FMT_NONE,
             )
         )
-        if not full:
+
+        # print named registers
+        if ONE_LINE:
+            INFO("\t" + " ".join(named_regs))
+            INFO("\t" + "--------------- " * 6)
+        else:
             INFO("\t" + " ".join(named_regs[0:3]))
             INFO("\t" + " ".join(named_regs[3:]))
             INFO("\t" + "--------------- " * 3)
-        else:
-            INFO("\t" + " ".join(named_regs))
-            INFO("\t" + "--------------- " * 6)
+
+        # print a, s, t registers
         for line in lines:
             INFO("\t" + " ".join(line))
-        INFO(")")
 
     def dump_reg_a(self):
         """
@@ -176,3 +179,7 @@ class Registers:
         # )
         # todo>
         return 'todo'
+
+if __name__ == '__main__':
+    regs = Registers()
+    regs.dump()
