@@ -349,7 +349,7 @@ class RV32Backend(AsmBackend):
         return ['\t'.join([elem[i:i + 4] for i in range(0, len(elem), 4)]) for elem in self.encoded]
 
     def apply_hex(self) -> list:
-        return ['0x{:08x}'.format(int(elem, 2)) for elem in self.encoded]
+        return ['0x{:08x}'.format(int(elem, 2) & 0xFFFFFFFF) for elem in self.encoded]
 
     def to_list(self) -> list:
         # todo>
