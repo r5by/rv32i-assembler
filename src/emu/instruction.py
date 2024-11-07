@@ -57,13 +57,17 @@ class Instruction(ABC):
         """
         pass
 
+    @staticmethod
+    def get_reg_alias(gpr_idx: int) -> str:
+        return alias_abi[f'x{gpr_idx}']
+
     def __repr__(self):
         # no operands
         if not self.regs and not self.imm:
             return f"{self.name}"
 
         # Creating canonized register representations with 'x' prefix
-        x_args = [f'x{num}' for num in self.regs]
+        x_args = [Instruction.get_reg_alias(num) for num in self.regs]
 
         # Joining all register representations with commas
         regs_repr = ", ".join(x_args) if x_args else ""
@@ -115,7 +119,7 @@ class TranslatableInstruction(Instruction):
 
     @lru_cache(maxsize=None)
     def get_imm(self) -> Immediate:
-        if not self.imm:
+        if self.imm is None:
             raise NumberFormatException(f"Current instruction: {self} doesn't have immediate operand.")
 
         val = self.imm
@@ -124,6 +128,3 @@ class TranslatableInstruction(Instruction):
     def get_reg(self, num: int) -> int:
         return self.regs[num]
 
-    def get_reg_alias(self, num: int) -> str:
-        reg = self.regs[num]
-        return alias_abi[reg]

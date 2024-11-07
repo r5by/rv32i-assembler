@@ -1,3 +1,4 @@
+import sys
 import typing
 from abc import ABC, abstractmethod
 from typing import List, Type, Dict, Callable, Optional, Union, Set, Iterable, Tuple
@@ -6,7 +7,8 @@ from asm.instr_info import INS_XLEN
 from comm.logging import DEBUG, INFO, WARN
 from comm.colors import FMT_CPU, FMT_NONE, FMT_DEBUG
 from comm.int32 import Int32, UInt32
-from comm.exceptions import ASSERT_LEN, LaunchDebuggerException, RV32IBaseException
+from comm.exceptions import ASSERT_LEN, LaunchDebuggerException, RV32IBaseException, ASSERT_EXIST, \
+    ProgramNormalExitException
 from .debug import launch_debug_session
 
 from . import (
@@ -315,18 +317,20 @@ class RV32I(ISA):
         self.cpu.pc += addr.pcrel_value.value - 4
 
     def instruction_jal(self, ins: "Instruction"):
-        reg = "ra"  # default register is ra
-        if len(ins.regs) == 1:
+        reg = 1  # default register is ra (x1)
+        if len(ins.regs) == 0:
             addr = ins.get_imm()
         else:
-            ASSERT_LEN(ins.regs, 2)
+            ASSERT_LEN(ins.regs, 1)
             reg = ins.get_reg(0)
             addr = ins.get_imm()
         self.regs.set(reg, UInt32(self.cpu.pc))
         self.cpu.pc += addr.pcrel_value.value - 4
 
     def instruction_jalr(self, ins: "Instruction"):
-        ASSERT_LEN(ins.regs, 3)
+        ASSERT_LEN(ins.regs, 2)
+        ASSERT_EXIST(ins.imm)
+
         reg = ins.get_reg(0)
         base = ins.get_reg(1)
         addr = ins.get_imm().abs_value.value
@@ -351,7 +355,12 @@ class RV32I(ISA):
 
     def instruction_ecall(self, ins: "Instruction"):
         ASSERT_LEN(ins.regs, 0)
-        pass
+        INFO(
+            FMT_DEBUG
+            + "Program exits at 0x{:08X}".format(self.cpu.pc - INS_XLEN*1)
+            + FMT_NONE
+        )
+        raise ProgramNormalExitException()
 
     def instruction_nop(self, ins: "Instruction"):
         ASSERT_LEN(ins.regs, 0)
@@ -430,8 +439,8 @@ class CPU(ABC):
 
     def step(self):
         """
-                Execute a single instruction, then return.
-                """
+            Execute a single instruction, then return.
+        """
         launch_debugger = False
 
         try:
@@ -451,6 +460,17 @@ class CPU(ABC):
 
                 WARN(FMT_CPU + "[CPU] Debugger launch requested!" + FMT_NONE)
                 launch_debugger = True
+
+            elif isinstance(ex, ProgramNormalExitException):
+
+                # if debugger is active, raise the program exit ex to it
+                if self.debugger_active:
+                    raise ex
+
+                WARN(FMT_CPU + "[CPU] Simulation completed!" + FMT_NONE)
+                self.halted = True
+                launch_debugger = False
+
             else:
                 INFO(ex.message())
                 ex.print_stacktrace()
@@ -489,7 +509,6 @@ class CPU(ABC):
         # set a0 to the hartid
         self.regs.set_by_name("a0", UInt32(self.hart_id), mark_set=False)
 
-    #todo>
     def launch(self):
         entrypoint = self.mmu.find_entrypoint()
 

@@ -4,8 +4,8 @@ import typing
 from comm.colors import *
 from comm.int32 import UInt32
 from comm.logging import DEBUGGER_INFO, DEBUGGER_ERROR, DEBUGGER_WARN
-from comm.exceptions import LaunchDebuggerException, InvalidRegisterException, NumberFormatException, \
-    InvalidAddressException
+from comm.exceptions import LaunchDebuggerException, InvalidAddressException, ProgramNormalExitException, \
+    RV32IBaseException
 from comm.utils import parse_numeric_argument
 
 HIST_FILE = os.path.join(os.path.expanduser("~"), ".rv32emu_history")
@@ -77,36 +77,42 @@ def launch_debug_session(cpu: "CPU", prompt=""):
         mmu.dump(addr, args[1:])
 
     def dump_stack(*args):
+        #todo> support stack
         mmu.dump(regs.get_by_name("sp"), *args)
 
     def ins():
         current_instruction = mmu.read_ins(cpu.pc)
         DEBUGGER_INFO("Current instruction at 0x{:08X}: {}".format(cpu.pc, current_instruction))
 
-    def run_ins(*args: str):
-
-        if len(args) > 4:
-            DEBUGGER_ERROR("Invalid arg count!")
-            return
-        asm_instr = args[0]
-        asm_args = args[1:]
-        ins = TranslatableInstruction(asm_instr, tuple(asm_args), cpu.pc)
-
-        DEBUGGER_INFO(FMT_DEBUG + "Running instruction {}".format(ins) + FMT_NONE)
-        cpu.run_instruction(ins)
-
     def cont():
         try:
             cpu.run()
-        except LaunchDebuggerException:
-            DEBUGGER_WARN(FMT_DEBUG + "Returning to debugger...")
-            return
+
+        except RV32IBaseException as ex:
+            if isinstance(ex, LaunchDebuggerException):
+                DEBUGGER_WARN(FMT_DEBUG + "Returning to debugger...")
+                return
+            elif isinstance(ex, ProgramNormalExitException):
+                DEBUGGER_WARN(FMT_DEBUG + "Exiting debugger...")
+                sys.exit(cpu.exit_code)
+            else:
+                DEBUGGER_ERROR(f"Unknown CPU state exception: {ex}")
+                ex.print_stacktrace()
 
     def step():
         try:
             cpu.step()
-        except LaunchDebuggerException:
-            return
+
+        except RV32IBaseException as ex:
+            if isinstance(ex, LaunchDebuggerException):
+                return
+            elif isinstance(ex, ProgramNormalExitException):
+                DEBUGGER_WARN(FMT_DEBUG + "Exiting debugger...")
+                sys.exit(cpu.exit_code)
+            else:
+                DEBUGGER_ERROR(f"Unknown CPU state exception: {ex}")
+                ex.print_stacktrace()
+
 
     # Dictionary of aliases to function references
     aliases = {
@@ -114,9 +120,8 @@ def launch_debug_session(cpu: "CPU", prompt=""):
         'c': cont,
         'n': step,
         'd': dump,
-        'ds': dump_stack,
+        'ds': dump_stack, # not supported yet
         'dm': dump_mem,
-        'ri': run_ins,
     }
 
     import shlex

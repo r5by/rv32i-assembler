@@ -207,16 +207,3 @@ class RF:
         :return: The list
         """
         return ["zero", "ra", "sp", "gp", "tp", "fp"]
-
-    # def __repr__(self):
-    #     # return "<Registers[xlen=32]{}>".format(
-    #     #     "{"
-    #     #     + ", ".join(self._reg_repr("a{}".format(i), 2, "0x") for i in range(8))
-    #     #     + "}",
-    #     # )
-    #     # todo>
-    #     return 'todo'
-
-# if __name__ == '__main__':
-#     regs = RF()
-#     regs.dump()

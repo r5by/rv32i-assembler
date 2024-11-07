@@ -1,4 +1,6 @@
 from abc import abstractmethod
+from tokenize import Number
+
 from comm.colors import *
 import typing
 
@@ -93,7 +95,18 @@ def ASSERT_LEN(a1, size):
             (a1, size),
         )
 
+def ASSERT_EXIST(x):
+    if x is None:
+        raise NumberFormatException(
+            f'None type is not permitted.'
+        )
+
 # this exception is not printed and simply signals that an interactive debugging session is
 class LaunchDebuggerException(RV32IBaseException):
+    def message(self) -> str:
+        return ""
+
+# this exception signals a normal program exit
+class ProgramNormalExitException(RV32IBaseException):
     def message(self) -> str:
         return ""
