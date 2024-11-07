@@ -28,7 +28,7 @@ class _Parser:
 		for line_num, line in enumerate(code):
 			DEBUG(f'Interpreting: {line}')
 			tokens = _Parser.tokenize(line)
-			tokens = _Parser.canonicalize(tokens, st)
+			tokens = _Parser.canonicalize(tokens, st, line_num * 4 + base)
 
 			if tokens:
 				encoded_instruction = _Parser.encode(tokens)
@@ -46,7 +46,7 @@ class _Parser:
 		for line_num, line in enumerate(code):
 			DEBUG(f'Interpreting: {line}')
 			tokens = _Parser.tokenize(line)
-			tokens = _Parser.canonicalize(tokens, st)
+			tokens = _Parser.canonicalize(tokens, st, pc)
 
 			op, args = _Parser.analyze(tokens)
 
@@ -56,12 +56,12 @@ class _Parser:
 		return addr_2_inst_tokens
 
 	@staticmethod
-	def canonicalize(tokens : list, st: Dict[str, int]) -> list:
+	def canonicalize(tokens : list, st: Dict[str, int], pc: int) -> list:
 
 		def resolve_link_addr(_tk: str):
 			for key, value in st.items():
 				if key in _tk:
-					_tk = _tk.replace(key, str(value))
+					_tk = _tk.replace(key, str(value - pc)) # relative to pc
 			return _tk
 
 		# Evaluate expressions and link labels

@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Union
 
 from comm.exceptions import InvalidAddressException
 from comm.int32 import UInt32
-from comm.logging import INFO, ERROR
+from comm.logging import INFO, ERROR, DEBUG
 from comm.colors import FMT_BOLD
 from . import (
     Instruction,
@@ -59,6 +59,7 @@ class MMU:
         :param addr: The location
         :return: The Instruction
         """
+        DEBUG(f'Reading from 0x{addr:08X}')
         return self.program[addr]
 
     def read(self, addr: Union[int, UInt32], size: int) -> bytearray:

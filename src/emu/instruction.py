@@ -123,7 +123,7 @@ class TranslatableInstruction(Instruction):
             raise NumberFormatException(f"Current instruction: {self} doesn't have immediate operand.")
 
         val = self.imm
-        return Immediate(abs_value=val, pcrel_value=val - self.addr)
+        return Immediate(abs_value=self.addr + val, pcrel_value=val)
 
     def get_reg(self, num: int) -> int:
         return self.regs[num]

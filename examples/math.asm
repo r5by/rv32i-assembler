@@ -3,7 +3,7 @@
 
 # Main entry point
 main:
-        ebreak
+        ;ebreak
         addi a0, zero, 15     # Load immediate 15 into register a0
         addi a1, zero, 27     # Load immediate 27 into register a1
         jal ra, add           # Call the add subroutine to calculate a0 + a1
@@ -11,7 +11,7 @@ main:
         jal ra, sub           # Call the sub subroutine to calculate result - 10
 
         # exit gracefully
-        ebreak
+        ;ebreak
         addi    a0, zero, 0
         addi    a7, zero, 93
         ecall                   # exit with code 0

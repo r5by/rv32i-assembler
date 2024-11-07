@@ -403,6 +403,10 @@ class RV32InstrInfo(InstrInfo):
             op (str): Instruction mnemonic.
             args (List[Union[str, int]]): [rs1, rs2, imm]
 
+        Note:
+            B-type instructions set pc: pc+=imm
+            therefore, passed in imm should be converted to relative offset
+
         Returns:
             str: Binary representation of the instruction.
             cano: [rs1, rs2, imm]
@@ -433,7 +437,7 @@ class RV32InstrInfo(InstrInfo):
         rs1_num = RV32InstrInfo.extract_reg_num(rs1)
         rs2_num = RV32InstrInfo.extract_reg_num(rs2)
         # imm_13 = int(imm) & 0x1FFF  # Mask to 13 bits
-        imm_13 = format_imm13(imm)
+        imm_13 = format_imm13(int(imm))
 
         # Extract bits of the immediate value
         imm_12 = (imm_13 >> 12) & 0x1    # Bit 12
