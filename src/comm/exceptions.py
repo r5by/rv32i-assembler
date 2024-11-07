@@ -84,6 +84,9 @@ def INS_NOT_IMPLEMENTED(ins):
     raise UnimplementedException(ins)
 
 def ASSERT_LEN(a1, size):
+    if a1 is None and size == 0:
+        return
+
     if len(a1) != size:
         raise ParseException(
             "ASSERTION_FAILED: Expected {} to be of length {}".format(a1, size),

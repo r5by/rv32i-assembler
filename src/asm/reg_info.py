@@ -6,19 +6,22 @@ from comm.exceptions import InvalidRegisterException
 
 def init_abi_alias():
 	path = Path(__file__).parent / "data/reg_abi_alias.dat"
-	rmap = {}
+	_map, rmap = {}, {}
 
 	f = open(path, "r")
 	line = f.readline()
 	while line != "":
 		e = line.split()
-		rmap[e[0]] = e[1]
+
+		_map[e[0]] = e[1]
+		rmap[e[1]] = e[0] # reverse map: "x" to alias
+
 		line = f.readline()
 	f.close()
 
-	return rmap
+	return _map, rmap
 
-abi_alias = init_abi_alias()
+abi_alias, alias_abi = init_abi_alias()
 
 # Regular expressions for different cases
 dict_pat_reg = {
@@ -49,3 +52,7 @@ def reg_map(reg: str):
 
 	# If none of the patterns match, raise an exception
 	raise InvalidRegisterException(reg)
+
+
+def get_alias_name_by_id(gpr_idx: int) -> str:
+	return alias_abi[f'x{gpr_idx}']

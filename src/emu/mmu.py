@@ -104,8 +104,12 @@ class MMU:
     def load_program(self, asms, align_to: int = 4):
         for addr, asm_cano in asms.items():
             instr_name = asm_cano[0]
-            instr_args = asm_cano[1]
-            trans_instr = TranslatableInstruction(name=instr_name, args=instr_args, addr=addr)
+
+            instr_operands = asm_cano[1]
+            instr_regs = instr_operands.regs
+            instr_imm = instr_operands.imm
+            trans_instr = TranslatableInstruction(name=instr_name, addr=addr, regs=instr_regs,  imm=instr_imm)
+
             self.program[addr] = trans_instr
 
         self.size = len(asms)

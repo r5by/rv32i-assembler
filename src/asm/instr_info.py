@@ -1,10 +1,10 @@
 import re
-
+from dataclasses import dataclass, field
 from comm.exceptions import ParseException, InvalidRegisterException, UnimplementedException
 from comm.logging import DEBUG
 from comm.utils import load_json_config, format_imm
 from enum import Enum, auto
-from typing import Dict, List, Union, Callable, Iterable
+from typing import Dict, List, Union, Callable, Iterable, Optional
 from abc import ABC, abstractmethod
 from asm.reg_info import reg_map
 
@@ -16,6 +16,11 @@ format_imm12 = lambda imm: format_imm(imm, 12)
 format_imm13 = lambda imm: format_imm(imm, 13)
 format_imm20 = lambda imm: format_imm(imm, 20)
 format_imm21 = lambda imm: format_imm(imm, 21)
+
+@dataclass
+class Operand:
+    regs: Optional[List[int]] = field(default=None)
+    imm: Optional[int] = None
 
 # Enum for instruction types
 class InstructionType(Enum):
@@ -182,7 +187,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr, [rs2_num, rs1_num, imm_12]
+        return bin_instr, Operand(regs=[rs2_num, rs1_num], imm=imm_12)
 
     def parse_R_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
@@ -242,7 +247,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr, [rd_num, rs1_num, rs2_num]
+        return bin_instr, Operand(regs=[rd_num, rs1_num, rs2_num])
 
     def parse_I_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
@@ -308,7 +313,7 @@ class RV32InstrInfo(InstrInfo):
                 opcode
             )
 
-            canonicalizer = [rd_num, rs1_num, shamt_6]
+            canonicalizer = Operand(regs=[rd_num, rs1_num], imm=shamt_6)
         elif op == 'jalr':
             # JALR instruction: rd, rs1, imm
             # todo> support all forms of jalr instructions:
@@ -328,7 +333,7 @@ class RV32InstrInfo(InstrInfo):
                 opcode
             )
 
-            canonicalizer = [rd_num, rs1_num, imm_12]
+            canonicalizer = Operand(regs=[rd_num, rs1_num], imm=imm_12)
         elif op in ['lb', 'lh', 'lw', 'lbu', 'lhu']:
             # Load instructions: rd, imm, rs1
             rd_num = RV32InstrInfo.extract_reg_num(rd)
@@ -345,7 +350,7 @@ class RV32InstrInfo(InstrInfo):
                 opcode
             )
 
-            canonicalizer = [rd_num, rs1_num, imm_12]
+            canonicalizer = Operand(regs=[rd_num, rs1_num], imm=imm_12)
         elif op in ['ecall', 'ebreak']:
             # System instructions
             # ecall and ebreak have fixed encodings
@@ -366,7 +371,7 @@ class RV32InstrInfo(InstrInfo):
                 opcode
             )
 
-            canonicalizer = [] # after encoding, return 0-args for emulator to process later on
+            canonicalizer = Operand() # after encoding, return 0-args for emulator to process later on
         else:
             # Standard I-type instructions: rd, rs1, imm
             rd_num = RV32InstrInfo.extract_reg_num(rd)
@@ -382,7 +387,7 @@ class RV32InstrInfo(InstrInfo):
                 (rd_num << 7) |
                 opcode
             )
-            canonicalizer = [rd_num, rs1_num, imm_12]
+            canonicalizer = Operand(regs=[rd_num, rs1_num], imm=imm_12)
 
         # Convert the instruction to a 32-bit binary string
         bin_instr = format(instruction, '032b')
@@ -454,7 +459,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr, [rs1_num, rs2_num, imm_13]
+        return bin_instr, Operand(regs=[rs1_num, rs2_num],imm=imm_13)
 
     def parse_U_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
@@ -509,7 +514,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr, [rd_num, imm_20]
+        return bin_instr, Operand(regs=[rd_num], imm=imm_20)
 
     def parse_J_type(self, op: str, args: List[Union[str, int]]) -> (str, Iterable[int]):
         """
@@ -550,31 +555,6 @@ class RV32InstrInfo(InstrInfo):
         imm_11 = (imm_21 >> 11) & 0x1  # Bit 11
         imm_19_12 = (imm_21 >> 12) & 0xFF  # Bits 19-12
 
-        # Assemble the immediate in the correct positions
-        imm_field = (
-                (imm_20 << 31) |
-                (imm_19_12 << 12) |
-                (imm_11 << 20) |
-                (imm_10_1 << 21)
-        )
-
-        # Assemble the instruction bits
-        instruction = (
-                imm_field |
-                (rd_num << 7) |
-                opcode
-        )
-
-        # Adjust the immediate field to the correct positions
-        instruction = (
-                ((imm_20 << 31) |
-                 (imm_19_12 << 12) |
-                 (imm_11 << 20) |
-                 (imm_10_1 << 21)) |
-                (rd_num << 7) |
-                opcode
-        )
-
         # Shift the bits to their correct positions
         instruction = (
                 ((imm_20 & 0x1) << 31) |
@@ -589,7 +569,7 @@ class RV32InstrInfo(InstrInfo):
         bin_instr = format(instruction, '032b')
         DEBUG(f'binary encoding completed: {bin_instr}')
 
-        return bin_instr, [rd_num, imm_21]
+        return bin_instr, Operand(regs=[rd_num],imm=imm_21)
 
 
 rv32i = RV32InstrInfo('./data/rv32i.json')

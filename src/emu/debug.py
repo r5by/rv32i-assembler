@@ -9,9 +9,10 @@ from comm.exceptions import LaunchDebuggerException, InvalidRegisterException, N
 from comm.utils import parse_numeric_argument
 
 HIST_FILE = os.path.join(os.path.expanduser("~"), ".rv32emu_history")
+from . import TranslatableInstruction
 
 if typing.TYPE_CHECKING:
-    from . import CPU, TranslatableInstruction
+    from . import CPU
 
 def print_help_info():
     DEBUGGER_INFO(FMT_DEBUG + "Welcome to the RV32Emu Debugger! Here are some commands you can use:" + FMT_NONE)
@@ -41,8 +42,11 @@ def launch_debug_session(cpu: "CPU", prompt=""):
 
     print_help_info()  # welcome banner
 
-    # Alias setup
     def dump(*args):
+        """
+            Dump contents of registers
+        """
+
         if not args:
             cpu.regs.dump_all()
             return
@@ -79,12 +83,16 @@ def launch_debug_session(cpu: "CPU", prompt=""):
         current_instruction = mmu.read_ins(cpu.pc)
         DEBUGGER_INFO("Current instruction at 0x{:08X}: {}".format(cpu.pc, current_instruction))
 
-    def run_ins(name, *args: str):
-        if len(args) > 3:
-            print("Invalid arg count!")
+    def run_ins(*args: str):
+
+        if len(args) > 4:
+            DEBUGGER_ERROR("Invalid arg count!")
             return
-        ins = TranslatableInstruction(name, tuple(args), cpu.pc)
-        print(FMT_DEBUG + "Running instruction {}".format(ins) + FMT_NONE)
+        asm_instr = args[0]
+        asm_args = args[1:]
+        ins = TranslatableInstruction(asm_instr, tuple(asm_args), cpu.pc)
+
+        DEBUGGER_INFO(FMT_DEBUG + "Running instruction {}".format(ins) + FMT_NONE)
         cpu.run_instruction(ins)
 
     def cont():
@@ -104,7 +112,7 @@ def launch_debug_session(cpu: "CPU", prompt=""):
     aliases = {
         'i': ins,
         'c': cont,
-        's': step,
+        'n': step,
         'd': dump,
         'ds': dump_stack,
         'dm': dump_mem,
@@ -120,6 +128,8 @@ def launch_debug_session(cpu: "CPU", prompt=""):
             command = parts[0]
             args = parts[1:]  # Remaining parts are arguments
 
+            # DEBUGGER_INFO(f'command: {command}')
+            # DEBUGGER_INFO(f'args: {args}')
             if command not in aliases:
                 DEBUGGER_ERROR("Unknown command")
                 print_help_info()

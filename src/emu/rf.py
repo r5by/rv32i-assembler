@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from asm.reg_info import get_alias_name_by_id
 from comm.colors import *
 from comm.exceptions import InvalidRegisterException
 from comm.int32 import Int32, UInt32
@@ -69,7 +70,7 @@ class RF:
 
         self.size = len(self.valid_regs) # total number of GPRs
 
-    def is_reg_valid(self, reg: str) -> bool:
+    def is_reg_name_valid(self, reg: str) -> bool:
         return reg in self.valid_regs.keys()
 
     def is_reg_type_valid(self, t: str) -> bool:
@@ -91,10 +92,11 @@ class RF:
                     reg = "{}{}".format(name, i)
                     lines[i].append(self._reg_repr(reg))
 
+        # print title line
         INFO(
             "Registers[{},{}]:".format(
                 FMT_ORANGE + FMT_UNDERLINE + "read" + FMT_NONE,
-                FMT_ORANGE + FMT_BOLD + "written" + FMT_NONE,
+                FMT_RED + FMT_BOLD + "written" + FMT_NONE,
             )
         )
 
@@ -135,7 +137,7 @@ class RF:
         )
 
     def dump_by_name(self, reg: str):
-        if not self.is_reg_valid(reg):
+        if not self.is_reg_name_valid(reg):
             ERROR(f'Invalid register: {reg}')
             return
 
@@ -146,25 +148,26 @@ class RF:
     def _reg_repr(self, reg: str, name_len=4, fmt="08X"):
         txt = "{:{}}=0x{:{}}".format(reg, name_len, self.get_by_name(reg, False), fmt)
         if reg == self.last_set:
-            return FMT_ORANGE + FMT_BOLD + txt + FMT_NONE
+            return FMT_RED + FMT_BOLD + txt + FMT_NONE
         if reg == self.last_read:
             return FMT_ORANGE + FMT_UNDERLINE + txt + FMT_NONE
         if reg == "zero":
             return txt
 
-        return txt
+        return FMT_INFO + txt
 
     def set_by_name(self, reg: str, val: Int32, mark_set: bool = True) -> bool:
-        if not self.is_reg_valid(reg):
+        if not self.is_reg_name_valid(reg):
             raise InvalidRegisterException(reg)
 
         reg_id = self.valid_regs[reg]
+
         return self.set(reg_id, val, mark_set)
 
     def set(self, reg: int, val: Int32, mark_set: bool = True) -> bool:
         """
         Set a register content to val
-        :param reg: The register to set (canonized to 'x[num]')
+        :param reg: The register to set (by index)
         :param val: The new value
         :param mark_set: If True, marks this register as "last accessed" (only used internally)
         :return: If the operation was successful
@@ -173,14 +176,13 @@ class RF:
             return False
 
         if mark_set:
-            self.last_set = reg
+            self.last_set = get_alias_name_by_id(reg)
 
         self.vals[reg] = val.signed()
-
         return True
 
     def get_by_name(self, reg: str, mark_read: bool = True) -> Int32:
-        if not self.is_reg_valid(reg):
+        if not self.is_reg_name_valid(reg):
             raise InvalidRegisterException(reg)
 
         reg_id = self.valid_regs[reg]
@@ -193,9 +195,8 @@ class RF:
         :param mark_read: If the register should be marked as "last read" (only used internally)
         :return: The contents of register reg
         """
-
         if mark_read:
-            self.last_read = reg
+            self.last_read = get_alias_name_by_id(reg)
 
         return self.vals[reg]
 
@@ -207,15 +208,15 @@ class RF:
         """
         return ["zero", "ra", "sp", "gp", "tp", "fp"]
 
-    def __repr__(self):
-        # return "<Registers[xlen=32]{}>".format(
-        #     "{"
-        #     + ", ".join(self._reg_repr("a{}".format(i), 2, "0x") for i in range(8))
-        #     + "}",
-        # )
-        # todo>
-        return 'todo'
+    # def __repr__(self):
+    #     # return "<Registers[xlen=32]{}>".format(
+    #     #     "{"
+    #     #     + ", ".join(self._reg_repr("a{}".format(i), 2, "0x") for i in range(8))
+    #     #     + "}",
+    #     # )
+    #     # todo>
+    #     return 'todo'
 
-if __name__ == '__main__':
-    regs = RF()
-    regs.dump()
+# if __name__ == '__main__':
+#     regs = RF()
+#     regs.dump()

@@ -1,12 +1,12 @@
 import re
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 from functools import lru_cache
 
 from abc import ABC, abstractmethod
 from typing import Union
-from comm.int32 import Int32
+from comm.int32 import Int32, UInt32
 from comm.exceptions import NumberFormatException
-
+from asm.reg_info import alias_abi
 
 class Immediate:
     """
@@ -40,25 +40,42 @@ class Immediate:
 
 class Instruction(ABC):
     name: str
-    args: tuple
+    regs: tuple
+    imm: int
 
     @abstractmethod
-    def get_imm(self, num: int) -> Immediate:
+    def get_imm(self) -> Immediate:
         """
         parse and get immediate argument
         """
         pass
 
     @abstractmethod
-    def get_reg(self, num: int) -> str:
+    def get_reg(self, num: int) -> int:
         """
-        parse and get an register argument
+        parse and get an register GPR index
         """
         pass
 
     def __repr__(self):
-        x_args = [f'x{num}' for num in self.args]
-        return "{} {}".format(self.name, ", ".join(x_args))
+        # no operands
+        if not self.regs and not self.imm:
+            return f"{self.name}"
+
+        # Creating canonized register representations with 'x' prefix
+        x_args = [f'x{num}' for num in self.regs]
+
+        # Joining all register representations with commas
+        regs_repr = ", ".join(x_args) if x_args else ""
+
+        # Adding immediate value if it exists
+        if self.imm is not None:
+            imm_repr = f", {self.imm}"
+        else:
+            imm_repr = ""
+
+        # Formatting the whole representation
+        return f"{self.name} {regs_repr}{imm_repr}".strip()
 
 
 class InstructionWithEncoding(ABC):
@@ -82,21 +99,31 @@ class TranslatableInstruction(Instruction):
     def __init__(
         self,
         name: str,
-        args: Union[Tuple[()], Tuple[str], Tuple[str, str], Tuple[str, str, str]],
-        addr: int,
+        addr: UInt32,
+        regs: Optional[Union[Tuple[()], Tuple[int], Tuple[int, int], Tuple[int, int, int]]] = None,
+        imm: Optional[int] = None,
     ):
         self.name = name
-        self.args = args
         self._addr = addr
 
+        self.regs = regs
+        self.imm = imm
+
     @property
-    def addr(self) -> int:
+    def addr(self) -> UInt32:
         return self._addr
 
     @lru_cache(maxsize=None)
-    def get_imm(self, num: int) -> Immediate:
-        val = self.args[num]
+    def get_imm(self) -> Immediate:
+        if not self.imm:
+            raise NumberFormatException(f"Current instruction: {self} doesn't have immediate operand.")
+
+        val = self.imm
         return Immediate(abs_value=val, pcrel_value=val - self.addr)
 
-    def get_reg(self, num: int) -> str:
-        return self.args[num]
+    def get_reg(self, num: int) -> int:
+        return self.regs[num]
+
+    def get_reg_alias(self, num: int) -> str:
+        reg = self.regs[num]
+        return alias_abi[reg]

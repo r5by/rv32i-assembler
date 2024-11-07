@@ -56,26 +56,25 @@ class ISA(ABC):
             if member.startswith("instruction_"):
                 yield member[12:].replace("_", "."), getattr(self, member)
 
-    def parse_mem_ins(self, ins: "Instruction") -> Tuple[str, UInt32]:
+    def parse_mem_ins(self, ins: "Instruction") -> Tuple[int, UInt32]:
         """
         parses rd, imm(rs) argument format and returns (rd, imm+rs1)
         (so a register and address tuple for memory instructions)
         """
-        assert len(ins.args) == 3
-        # handle rd, rs1, imm
+        assert len(ins.regs) == 2 and ins.imm
         rd = ins.get_reg(0)
         rs = self.regs.get(ins.get_reg(1)).unsigned()
-        imm = ins.get_imm(2)
+        imm = ins.get_imm()
         return rd, rs + imm.abs_value.unsigned()
 
     def parse_rd_rs_rs(
             self, ins: "Instruction", signed=True
-    ) -> Tuple[str, Int32, Int32]:
+    ) -> Tuple[int, Int32, Int32]:
         """
         Assumes the command is in <name> rd, rs1, rs2 format
         Returns the name of rd, and the values in rs1 and rs2
         """
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         if signed:
             return (
                 ins.get_reg(0),
@@ -89,7 +88,7 @@ class ISA(ABC):
                 UInt32(self.regs.get(ins.get_reg(2))),
             )
 
-    def parse_rd_rs_imm(self, ins: "Instruction") -> Tuple[str, Int32, Immediate]:
+    def parse_rd_rs_imm(self, ins: "Instruction") -> Tuple[int, Int32, Immediate]:
         """
         Assumes the command is in <name> rd, rs, imm format
         Returns the name of rd, the value in rs and the immediate imm
@@ -97,7 +96,7 @@ class ISA(ABC):
         return (
             ins.get_reg(0),
             Int32(self.regs.get(ins.get_reg(1))),
-            ins.get_imm(2),
+            ins.get_imm(),
         )
 
     def parse_rs_rs_imm(self, ins: "Instruction") -> Tuple[Int32, Int32, Immediate]:
@@ -108,12 +107,12 @@ class ISA(ABC):
         return (
             Int32(self.regs.get(ins.get_reg(0))),
             Int32(self.regs.get(ins.get_reg(1))),
-            ins.get_imm(2),
+            ins.get_imm(),
         )
 
     def get_reg_content(self, ins: "Instruction", ind: int) -> Int32:
         """
-        get the register name from ins and then return the register contents
+        get the register id from ins and then return the register contents
         """
         return self.regs.get(ins.get_reg(ind))
 
@@ -139,54 +138,54 @@ class RV32I(ISA):
     See https://maxvytech.com/images/RV32I-11-2018.pdf for a more detailed overview
     """
 
-    def instruction_lb(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.regs.set(rd, UInt32.sign_extend(self.mmu.read(addr.unsigned_value, 1), 8))
-
-    def instruction_lh(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.regs.set(rd, UInt32.sign_extend(self.mmu.read(addr.unsigned_value, 2), 16))
-
-    def instruction_lw(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 4)))
-
-    def instruction_lbu(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 1)))
-
-    def instruction_lhu(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 2)))
-
-    def instruction_sb(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.mmu.write(addr.unsigned_value, 1, self.regs.get(rd).to_bytes(1))
-
-    def instruction_sh(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.mmu.write(addr.unsigned_value, 2, self.regs.get(rd).to_bytes(2))
-
-    def instruction_sw(self, ins: "Instruction"):
-        rd, addr = self.parse_mem_ins(ins)
-        self.mmu.write(addr.unsigned_value, 4, self.regs.get(rd).to_bytes(4))
+    # def instruction_lb(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.regs.set(rd, UInt32.sign_extend(self.mmu.read(addr.unsigned_value, 1), 8))
+    #
+    # def instruction_lh(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.regs.set(rd, UInt32.sign_extend(self.mmu.read(addr.unsigned_value, 2), 16))
+    #
+    # def instruction_lw(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 4)))
+    #
+    # def instruction_lbu(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 1)))
+    #
+    # def instruction_lhu(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.regs.set(rd, UInt32(self.mmu.read(addr.unsigned_value, 2)))
+    #
+    # def instruction_sb(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.mmu.write(addr.unsigned_value, 1, self.regs.get(rd).to_bytes(1))
+    #
+    # def instruction_sh(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.mmu.write(addr.unsigned_value, 2, self.regs.get(rd).to_bytes(2))
+    #
+    # def instruction_sw(self, ins: "Instruction"):
+    #     rd, addr = self.parse_mem_ins(ins)
+    #     self.mmu.write(addr.unsigned_value, 4, self.regs.get(rd).to_bytes(4))
 
     def instruction_sll(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
         src2 = ins.get_reg(2)
         self.regs.set(dst, self.regs.get(src1) << (self.regs.get(src2) & 0b11111))
 
     def instruction_slli(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
-        imm = ins.get_imm(2)
+        imm = ins.get_imm()
         self.regs.set(dst, self.regs.get(src1) << (imm.abs_value & 0b11111))
 
     def instruction_srl(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
         src2 = ins.get_reg(2)
@@ -195,26 +194,26 @@ class RV32I(ISA):
         )
 
     def instruction_srli(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
-        imm = ins.get_imm(2)
+        imm = ins.get_imm()
         self.regs.set(
             dst, self.regs.get(src1).shift_right_logical(imm.abs_value & 0b11111)
         )
 
     def instruction_sra(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
         src2 = ins.get_reg(2)
         self.regs.set(dst, self.regs.get(src1) >> (self.regs.get(src2) & 0b11111))
 
     def instruction_srai(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
-        imm = ins.get_imm(2)
+        imm = ins.get_imm()
         self.regs.set(dst, self.regs.get(src1) >> (imm.abs_value & 0b11111))
 
     def instruction_add(self, ins: "Instruction"):
@@ -230,14 +229,14 @@ class RV32I(ISA):
         self.regs.set(dst, rs1 - rs2)
 
     def instruction_lui(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 2)
+        ASSERT_LEN(ins.regs, 2)
         reg = ins.get_reg(0)
-        self.regs.set(reg, ins.get_imm(1).abs_value << 12)
+        self.regs.set(reg, ins.get_imm().abs_value << 12)
 
     def instruction_auipc(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 2)
+        ASSERT_LEN(ins.regs, 2)
         reg = ins.get_reg(0)
-        imm = ins.get_imm(1).abs_value << 12
+        imm = ins.get_imm().abs_value << 12
         self.regs.set(reg, imm + self.cpu.pc)
 
     def instruction_xor(self, ins: "Instruction"):
@@ -311,38 +310,38 @@ class RV32I(ISA):
             self.cpu.pc += dst.pcrel_value.value - 4
 
     def instruction_j(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 1)
-        addr = ins.get_imm(0)
+        ASSERT_LEN(ins.regs, 1)
+        addr = ins.get_imm()
         self.cpu.pc += addr.pcrel_value.value - 4
 
     def instruction_jal(self, ins: "Instruction"):
         reg = "ra"  # default register is ra
-        if len(ins.args) == 1:
-            addr = ins.get_imm(0)
+        if len(ins.regs) == 1:
+            addr = ins.get_imm()
         else:
-            ASSERT_LEN(ins.args, 2)
+            ASSERT_LEN(ins.regs, 2)
             reg = ins.get_reg(0)
-            addr = ins.get_imm(1)
+            addr = ins.get_imm()
         self.regs.set(reg, UInt32(self.cpu.pc))
         self.cpu.pc += addr.pcrel_value.value - 4
 
     def instruction_jalr(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 3)
+        ASSERT_LEN(ins.regs, 3)
         reg = ins.get_reg(0)
         base = ins.get_reg(1)
-        addr = ins.get_imm(2).abs_value.value
+        addr = ins.get_imm().abs_value.value
         self.regs.set(reg, Int32(self.cpu.pc))
         self.cpu.pc = self.regs.get(base).unsigned_value + addr
 
     def instruction_ret(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 0)
+        ASSERT_LEN(ins.regs, 0)
         self.cpu.pc = self.regs.get_by_name("ra").unsigned_value
 
     def instruction_ebreak(self, ins: "Instruction"):
         self.instruction_sbreak(ins)
 
     def instruction_sbreak(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 0)
+        ASSERT_LEN(ins.regs, 0)
         INFO(
             FMT_DEBUG
             + "Debug instruction encountered at 0x{:08X}".format(self.cpu.pc - INS_XLEN*1)
@@ -351,27 +350,27 @@ class RV32I(ISA):
         raise LaunchDebuggerException()
 
     def instruction_ecall(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 0)
+        ASSERT_LEN(ins.regs, 0)
         pass
 
     def instruction_nop(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 0)
+        ASSERT_LEN(ins.regs, 0)
         pass
 
     def instruction_li(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 2)
+        ASSERT_LEN(ins.regs, 2)
         reg = ins.get_reg(0)
-        immediate = ins.get_imm(1).abs_value
+        immediate = ins.get_imm().abs_value
         self.regs.set(reg, Int32(immediate))
 
     def instruction_la(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 2)
+        ASSERT_LEN(ins.regs, 2)
         reg = ins.get_reg(0)
-        immediate = ins.get_imm(1).abs_value
+        immediate = ins.get_imm().abs_value
         self.regs.set(reg, Int32(immediate))
 
     def instruction_mv(self, ins: "Instruction"):
-        ASSERT_LEN(ins.args, 2)
+        ASSERT_LEN(ins.regs, 2)
         rd, rs = ins.get_reg(0), ins.get_reg(1)
         self.regs.set(rd, self.regs.get(rs))
 
@@ -488,7 +487,7 @@ class CPU(ABC):
 
     def initialize_registers(self):
         # set a0 to the hartid
-        self.regs.set_by_name("a0", UInt32(self.hart_id))
+        self.regs.set_by_name("a0", UInt32(self.hart_id), mark_set=False)
 
     #todo>
     def launch(self):
