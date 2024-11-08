@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from typing import Union
 from asm.reg_info import get_alias_name_by_id
 from comm.colors import *
 from comm.exceptions import InvalidRegisterException
@@ -156,13 +157,13 @@ class RF:
 
         return FMT_INFO + txt
 
-    def set_by_name(self, reg: str, val: Int32, mark_set: bool = True) -> bool:
+    def set_by_name(self, reg: str, val: Union[int, Int32], mark_set: bool = True) -> bool:
         if not self.is_reg_name_valid(reg):
             raise InvalidRegisterException(reg)
 
         reg_id = self.valid_regs[reg]
 
-        return self.set(reg_id, val, mark_set)
+        return self.set(reg_id, Int32(val), mark_set)
 
     def set(self, reg: int, val: Int32, mark_set: bool = True) -> bool:
         """

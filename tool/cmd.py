@@ -5,7 +5,7 @@ import argparse
 from asm.asm_backend import RV32Backend, EmitCodeMode
 from comm.logging import *
 from comm.utils import write_to_file
-from comm.exceptions import RV32IBaseException
+from comm.exceptions import RV32IBaseException, ProgramNormalExitException
 from emu.emulator import RV32IEmulator
 
 def parse_cmd():
@@ -78,8 +78,15 @@ def parse_cmd():
 
         emulator.instantiate_cpu()
         emulator.load_programs()
-        emulator.launch()
-        sys.exit(0)
+        try:
+            emulator.launch()
+        except RV32IBaseException as ex:
+            if isinstance(ex, ProgramNormalExitException):
+                sys.exit(0)
+            else:
+                ex.print_stacktrace()
+
+
 
     mnemonics = mc.mnemonics
     # show encoding in hex format for CheckFile usage

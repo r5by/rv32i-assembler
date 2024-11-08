@@ -67,6 +67,7 @@ class ISA(ABC):
         rd = ins.get_reg(0)
         rs = self.regs.get(ins.get_reg(1)).unsigned()
         imm = ins.get_imm()
+        # todo> check this imm
         return rd, rs + imm.abs_value.unsigned()
 
     def parse_rd_rs_rs(
@@ -184,7 +185,7 @@ class RV32I(ISA):
         dst = ins.get_reg(0)
         src1 = ins.get_reg(1)
         imm = ins.get_imm()
-        self.regs.set(dst, self.regs.get(src1) << (imm.abs_value & 0b11111))
+        self.regs.set(dst, self.regs.get(src1) << (imm.pcrel_value & 0b11111))
 
     def instruction_srl(self, ins: "Instruction"):
         ASSERT_LEN(ins.regs, 3)
@@ -201,7 +202,7 @@ class RV32I(ISA):
         src1 = ins.get_reg(1)
         imm = ins.get_imm()
         self.regs.set(
-            dst, self.regs.get(src1).shift_right_logical(imm.abs_value & 0b11111)
+            dst, self.regs.get(src1).shift_right_logical(imm.pcrel_value & 0b11111)
         )
 
     def instruction_sra(self, ins: "Instruction"):
@@ -211,12 +212,12 @@ class RV32I(ISA):
         src2 = ins.get_reg(2)
         self.regs.set(dst, self.regs.get(src1) >> (self.regs.get(src2) & 0b11111))
 
-    def instruction_srai(self, ins: "Instruction"):
-        ASSERT_LEN(ins.regs, 3)
-        dst = ins.get_reg(0)
-        src1 = ins.get_reg(1)
-        imm = ins.get_imm()
-        self.regs.set(dst, self.regs.get(src1) >> (imm.abs_value & 0b11111))
+    # def instruction_srai(self, ins: "Instruction"):
+    #     ASSERT_LEN(ins.regs, 3)
+    #     dst = ins.get_reg(0)
+    #     src1 = ins.get_reg(1)
+    #     imm = ins.get_imm()
+    #     self.regs.set(dst, self.regs.get(src1) >> (imm.abs_value & 0b11111))
 
     def instruction_add(self, ins: "Instruction"):
         dst, rs1, rs2 = self.parse_rd_rs_rs(ins)
@@ -224,7 +225,7 @@ class RV32I(ISA):
 
     def instruction_addi(self, ins: "Instruction"):
         dst, rs1, imm = self.parse_rd_rs_imm(ins)
-        self.regs.set(dst, rs1 + imm.abs_value)
+        self.regs.set(dst, rs1 + imm.pcrel_value)
 
     def instruction_sub(self, ins: "Instruction"):
         dst, rs1, rs2 = self.parse_rd_rs_rs(ins)
@@ -247,7 +248,7 @@ class RV32I(ISA):
 
     def instruction_xori(self, ins: "Instruction"):
         rd, rs1, imm = self.parse_rd_rs_imm(ins)
-        self.regs.set(rd, rs1 ^ imm.abs_value)
+        self.regs.set(rd, rs1 ^ imm.pcrel_value)
 
     def instruction_or(self, ins: "Instruction"):
         rd, rs1, rs2 = self.parse_rd_rs_rs(ins)
@@ -255,7 +256,7 @@ class RV32I(ISA):
 
     def instruction_ori(self, ins: "Instruction"):
         rd, rs1, imm = self.parse_rd_rs_imm(ins)
-        self.regs.set(rd, rs1 | imm.abs_value)
+        self.regs.set(rd, rs1 | imm.pcrel_value)
 
     def instruction_and(self, ins: "Instruction"):
         rd, rs1, rs2 = self.parse_rd_rs_rs(ins)
@@ -263,7 +264,7 @@ class RV32I(ISA):
 
     def instruction_andi(self, ins: "Instruction"):
         rd, rs1, imm = self.parse_rd_rs_imm(ins)
-        self.regs.set(rd, rs1 & imm.abs_value)
+        self.regs.set(rd, rs1 & imm.pcrel_value)
 
     def instruction_slt(self, ins: "Instruction"):
         rd, rs1, rs2 = self.parse_rd_rs_rs(ins)
@@ -279,7 +280,7 @@ class RV32I(ISA):
 
     def instruction_sltiu(self, ins: "Instruction"):
         dst, rs1, imm = self.parse_rd_rs_imm(ins)
-        self.regs.set(dst, UInt32(rs1.unsigned_value < imm.abs_value.unsigned_value))
+        self.regs.set(dst, UInt32(rs1.unsigned_value < imm.pcrel_value.unsigned_value))
 
     def instruction_beq(self, ins: "Instruction"):
         rs1, rs2, dst = self.parse_rs_rs_imm(ins)
@@ -333,7 +334,7 @@ class RV32I(ISA):
 
         reg = ins.get_reg(0)
         base = ins.get_reg(1)
-        addr = ins.get_imm().abs_value.value
+        addr = ins.get_imm().pcrel_value.value
         self.regs.set(reg, Int32(self.cpu.pc))
         self.cpu.pc = self.regs.get(base).unsigned_value + addr
 
@@ -463,13 +464,11 @@ class CPU(ABC):
 
             elif isinstance(ex, ProgramNormalExitException):
 
-                # if debugger is active, raise the program exit ex to it
-                if self.debugger_active:
-                    raise ex
-
                 WARN(FMT_CPU + "[CPU] Simulation completed!" + FMT_NONE)
                 self.halted = True
-                launch_debugger = False
+
+                # raise up to caller to handle
+                raise ex
 
             else:
                 INFO(ex.message())

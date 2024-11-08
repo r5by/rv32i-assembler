@@ -1,0 +1,12 @@
+[
+    {
+        "src": "../examples/math.asm",
+        "set": {"a0": "0x11", "a1": "0x101", "sp": 100},
+        "check": {"a0": "0", "a7": 93, "a1":  -10}
+    },
+    {
+        "src": "../examples/fibs.asm",
+        "set": {},
+        "check": {"t2":  610}
+    }
+]
