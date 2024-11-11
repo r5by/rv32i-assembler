@@ -92,9 +92,13 @@ def launch_debug_session(cpu: "CPU", prompt=""):
             if isinstance(ex, LaunchDebuggerException):
                 DEBUGGER_WARN(FMT_DEBUG + "Returning to debugger...")
                 return
+
             elif isinstance(ex, ProgramNormalExitException):
+
                 DEBUGGER_WARN(FMT_DEBUG + "Exiting debugger...")
-                sys.exit(cpu.exit_code)
+                cpu.halted = True  # Indicate that the CPU has halted
+                raise ex
+
             else:
                 DEBUGGER_ERROR(f"Unknown CPU state exception: {ex}")
                 ex.print_stacktrace()
@@ -105,10 +109,14 @@ def launch_debug_session(cpu: "CPU", prompt=""):
 
         except RV32IBaseException as ex:
             if isinstance(ex, LaunchDebuggerException):
-                return
+                raise ex
+
             elif isinstance(ex, ProgramNormalExitException):
+
                 DEBUGGER_WARN(FMT_DEBUG + "Exiting debugger...")
-                sys.exit(cpu.exit_code)
+                cpu.halted = True  # Indicate that the CPU has halted
+                raise ex
+
             else:
                 DEBUGGER_ERROR(f"Unknown CPU state exception: {ex}")
                 ex.print_stacktrace()
@@ -175,6 +183,18 @@ def launch_debug_session(cpu: "CPU", prompt=""):
             banner=FMT_DEBUG + prompt + FMT_NONE,
             exitmsg="Exiting debugger",
         )
+    except RV32IBaseException as ex:
+
+        if isinstance(ex, ProgramNormalExitException):
+
+            # If CPU has halted, exit the function
+            if cpu.halted:
+                return
+
+        else:
+            ex.print_stacktrace()
+            sys.exit(-1)
+
     finally:
         cpu.debugger_active = False
         readline.write_history_file(HIST_FILE)

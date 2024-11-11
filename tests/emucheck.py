@@ -60,17 +60,9 @@ def test_example(src, conf):
         emulator.launch()
 
     except RV32IBaseException as ex:
-        if isinstance(ex, LaunchDebuggerException):
-            #todo> gracefully handle debugger session
-            ERROR(f'Please turn off `ebreak` debugging in assembly before running this testing.')
-            sys.exit(-1)
 
-        if isinstance(ex, ProgramNormalExitException):
+        # Check the register values
+        for reg, expected_val in conf['check'].items():
+            actual_val = emulator.cpu.regs.get_by_name(reg)
+            assert actual_val == expected_val, f"Register {reg}: expected {expected_val}, got {actual_val}"
 
-            # Check the register values
-            for reg, expected_val in conf['check'].items():
-                actual_val = emulator.cpu.regs.get_by_name(reg)
-                assert actual_val == expected_val, f"Register {reg}: expected {expected_val}, got {actual_val}"
-
-        else:
-            ex.print_stacktrace()
