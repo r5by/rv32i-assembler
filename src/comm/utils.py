@@ -126,3 +126,75 @@ def format_imm(imm, n):
         imm_n -= (1 << n)  # Adjust for two's complement if the number is negative
 
     return imm_n
+
+
+import json
+
+class JSONBuilder:
+    def __init__(self):
+        self.entries = []
+        self.current_entry = None
+
+    def add_entry(self):
+        """Start a new entry and save the current one if it exists."""
+        if self.current_entry is not None:
+            self.entries.append(self.current_entry)
+        self.current_entry = {"src": "", "set": {}, "check": {}}
+
+    def add_src(self, src):
+        """Add or update the 'src' field of the current entry."""
+        if self.current_entry is None:
+            self.add_entry()
+        self.current_entry["src"] = src
+
+    def add_set(self, key, value):
+        """Add a key-value pair to the 'set' dictionary of the current entry."""
+        if self.current_entry is None:
+            self.add_entry()
+        self.current_entry["set"][key] = value
+
+    def add_check(self, key, value):
+        """Add a key-value pair to the 'check' dictionary of the current entry."""
+        if self.current_entry is None:
+            self.add_entry()
+        self.current_entry["check"][key] = value
+
+    def to_json(self):
+        """Return the JSON representation of the entries."""
+        # Add the last entry if it hasn't been added yet
+        if self.current_entry is not None:
+            self.entries.append(self.current_entry)
+            self.current_entry = None
+        return json.dumps(self.entries, indent=4)
+
+    def write_json(self, filename):
+        """Write the JSON data to a file."""
+        with open(filename, 'w') as f:
+            f.write(self.to_json())
+
+
+if __name__ == '__main__':
+    # Create an instance of JSONBuilder
+    builder = JSONBuilder()
+
+    # First entry
+    builder.add_entry()
+    builder.add_src("../examples/math.asm")
+    builder.add_set("a0", "0x11")
+    builder.add_set("a1", "0x101")
+    builder.add_set("sp", 100)
+    builder.add_check("a0", "0")
+    builder.add_check("a7", 93)
+    builder.add_check("a1", -10)
+
+    # Second entry
+    builder.add_entry()
+    builder.add_src("../examples/fibs.asm")
+    # 'set' is empty for this entry
+    builder.add_check("t2", 610)
+
+    # Output the JSON data
+    # print(builder.to_json())
+
+    # Optionally, write the JSON data to a file
+    builder.write_json('output.json')
